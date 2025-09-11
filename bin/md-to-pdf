@@ -1,0 +1,452 @@
+#!/bin/bash
+
+# md-to-pdf - Convert markdown files to PDF using pandoc
+# A Shell Starter tool for converting markdown documents to PDF format
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SHELL_STARTER_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+source "${SHELL_STARTER_ROOT}/lib/main.sh"
+
+# Exit codes
+readonly EXIT_SUCCESS=0
+readonly EXIT_DEPENDENCY_MISSING=1
+readonly EXIT_FILE_NOT_FOUND=2
+readonly EXIT_PERMISSION_DENIED=3
+readonly EXIT_INVALID_FORMAT=4
+readonly EXIT_DISK_FULL=5
+readonly EXIT_CONVERSION_FAILED=6
+readonly EXIT_INTERRUPTED=7
+
+# Global variables for cleanup
+TEMP_FILES=()
+OUTPUT_FILE=""
+
+# Cleanup function for interrupted operations
+cleanup() {
+	local exit_code=$?
+	local interrupted=false
+
+	# Check if we were interrupted
+	if [[ $exit_code -eq 130 ]]; then
+		interrupted=true
+		log::warn "Operation interrupted by user"
+	fi
+
+	# Clean up temporary files
+	for temp_file in "${TEMP_FILES[@]}"; do
+		if [[ -f "$temp_file" ]]; then
+			rm -f "$temp_file"
+			if [[ "$interrupted" == "true" ]]; then
+				log::info "Cleaned up temporary file: $temp_file"
+			fi
+		fi
+	done
+
+	# Clean up partial output file if interrupted
+	if [[ "$interrupted" == "true" && -n "$OUTPUT_FILE" && -f "$OUTPUT_FILE" ]]; then
+		rm -f "$OUTPUT_FILE"
+		log::info "Cleaned up partial output file: $OUTPUT_FILE"
+	fi
+
+	# Clean up pandoc error log
+	if [[ -f /tmp/pandoc_error.log ]]; then
+		rm -f /tmp/pandoc_error.log
+	fi
+
+	if [[ "$interrupted" == "true" ]]; then
+		log::info "Cleanup completed"
+		exit $EXIT_INTERRUPTED
+	fi
+}
+
+# Set up trap for cleanup on interrupt
+trap cleanup INT TERM
+
+show_help() {
+	cat <<EOF
+Usage: $(basename "$0") [OPTIONS] INPUT_FILE [OUTPUT_FILE]
+
+Convert markdown files to PDF using pandoc.
+
+ARGUMENTS:
+    INPUT_FILE         Path to the markdown file to convert
+    OUTPUT_FILE        Optional output PDF file path (default: INPUT_FILE.pdf)
+
+OPTIONS:
+    -h, --help         Show this help message and exit
+    -v, --version      Show version information and exit
+    -q, --quiet        Suppress verbose output
+    -f, --force        Overwrite existing output files without prompting
+
+EXAMPLES:
+    $(basename "$0") document.md                    # Convert to document.pdf
+    $(basename "$0") document.md report.pdf         # Convert to report.pdf
+    $(basename "$0") --force document.md            # Overwrite existing document.pdf
+    $(basename "$0") --help                         # Show this help
+EOF
+}
+
+check_dependencies() {
+	local missing_deps=()
+
+	if ! command -v pandoc >/dev/null 2>&1; then
+		missing_deps+=("pandoc")
+	fi
+
+	if [[ ${#missing_deps[@]} -gt 0 ]]; then
+		log::error "Required dependencies missing: ${missing_deps[*]}"
+		log::info "Please install the missing dependencies:"
+		log::info ""
+		log::info "macOS (Homebrew):"
+		log::info "  brew install pandoc"
+		log::info ""
+		log::info "Ubuntu/Debian:"
+		log::info "  sudo apt-get update && sudo apt-get install -y pandoc"
+		log::info ""
+		log::info "Other Linux distributions:"
+		log::info "  Check your package manager for pandoc"
+		log::info ""
+		log::info "Or download from: https://pandoc.org/installing.html"
+		return 1
+	fi
+
+	return 0
+}
+
+validate_file_permissions() {
+	local input_file="$1"
+	local output_file="$2"
+
+	# Check if input file exists and is readable
+	if [[ ! -r "$input_file" ]]; then
+		log::error "Cannot read input file: $input_file"
+		if [[ ! -e "$input_file" ]]; then
+			log::error "File does not exist"
+			return $EXIT_FILE_NOT_FOUND
+		else
+			log::error "File exists but is not readable (check permissions)"
+			return $EXIT_PERMISSION_DENIED
+		fi
+	fi
+
+	# Check if input file is actually a markdown file
+	if [[ ! "$input_file" =~ \.(md|markdown)$ ]]; then
+		log::warn "Input file does not have .md or .markdown extension: $input_file"
+		log::warn "Proceeding anyway, but ensure it's valid markdown"
+	fi
+
+	# Check output file permissions
+	local output_dir
+	if [[ -n "$output_file" ]]; then
+		output_dir="$(dirname "$output_file")"
+	else
+		output_dir="$(dirname "$input_file")"
+	fi
+
+	if [[ ! -w "$output_dir" ]]; then
+		log::error "Cannot write to output directory: $output_dir"
+		log::error "Check directory permissions"
+		return $EXIT_PERMISSION_DENIED
+	fi
+
+	return 0
+}
+
+check_output_file_exists() {
+	local output_file="$1"
+	local quiet="$2"
+	local force="$3"
+
+	if [[ -f "$output_file" ]]; then
+		if [[ "$force" == "true" ]]; then
+			# Force mode - overwrite without prompting
+			if [[ "$quiet" == "false" ]]; then
+				log::warn "Overwriting existing file: $output_file"
+			fi
+			return 0
+		elif [[ "$quiet" == "true" ]]; then
+			# Quiet mode - warn but don't prompt
+			log::warn "Output file already exists and will be overwritten: $output_file"
+			return 0
+		else
+			# Interactive mode - prompt for confirmation
+			log::warn "Output file already exists: $output_file"
+			read -p "Do you want to overwrite it? (y/N): " -n 1 -r
+			echo
+			if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+				log::info "Operation cancelled by user"
+				return 1
+			fi
+		fi
+	fi
+
+	return 0
+}
+
+check_disk_space() {
+	local output_file="$1"
+	local input_file="$2"
+
+	# Get output directory
+	local output_dir
+	if [[ -n "$output_file" ]]; then
+		output_dir="$(dirname "$output_file")"
+	else
+		output_dir="$(dirname "$input_file")"
+	fi
+
+	# Get available disk space in MB
+	local available_space
+	if command -v df >/dev/null 2>&1; then
+		available_space=$(df -m "$output_dir" | tail -1 | awk '{print $4}')
+	else
+		# Fallback if df not available
+		available_space=1000 # Assume 1GB available
+	fi
+
+	# Estimate output size (rough estimate: input size * 2 + 100KB overhead)
+	local input_size
+	if [[ -f "$input_file" ]]; then
+		input_size=$(stat -f%z "$input_file" 2>/dev/null || stat -c%s "$input_file" 2>/dev/null || echo "1000")
+		input_size=$((input_size / 1024 / 1024)) # Convert to MB
+	else
+		input_size=1
+	fi
+
+	local estimated_output=$((input_size * 2 + 1)) # 2x input + 1MB overhead
+
+	if [[ $available_space -lt $estimated_output ]]; then
+		log::error "Insufficient disk space for conversion"
+		log::error "Available: ${available_space}MB, Estimated needed: ${estimated_output}MB"
+		log::error "Please free up disk space or choose a different output location"
+		return $EXIT_DISK_FULL
+	fi
+
+	return 0
+}
+
+validate_markdown_format() {
+	local input_file="$1"
+
+	# Check if file is empty
+	if [[ ! -s "$input_file" ]]; then
+		log::error "Input file is empty: $input_file"
+		log::error "Please provide a markdown file with content"
+		return $EXIT_INVALID_FORMAT
+	fi
+
+	# Basic validation - check for common markdown patterns
+	local has_markdown=false
+	local line_count=0
+
+	while IFS= read -r line || [[ -n "$line" ]]; do
+		((line_count++))
+		# Check for markdown headers, links, lists, etc.
+		if [[ $line =~ ^#{1,6}\  ]] || [[ $line =~ \[.*\]\(.*\) ]] || [[ $line =~ ^[\*\-\+]\  ]] || [[ $line =~ ^[0-9]+\.\  ]]; then
+			has_markdown=true
+			break
+		fi
+
+		# Limit check to first 10 lines for performance
+		if [[ $line_count -gt 10 ]]; then
+			break
+		fi
+	done <"$input_file"
+
+	if [[ "$has_markdown" == "false" ]]; then
+		log::warn "Input file does not appear to contain markdown formatting"
+		log::warn "Proceeding with conversion anyway..."
+	fi
+
+	return 0
+}
+
+convert_markdown_to_pdf() {
+	local input_file="$1"
+	local output_file="$2"
+	local quiet="$3"
+
+	if [[ "$quiet" == "false" ]]; then
+		log::info "Starting markdown to PDF conversion..."
+		spinner::start "Converting $input_file to PDF"
+	fi
+
+	# Track temporary files for cleanup
+	TEMP_FILES+=("/tmp/pandoc_error.log")
+
+	# Call pandoc with appropriate arguments
+	if pandoc "$input_file" -o "$output_file" --pdf-engine=xelatex 2>/tmp/pandoc_error.log; then
+		if [[ "$quiet" == "false" ]]; then
+			spinner::stop
+			log::success "Conversion completed successfully"
+			log::info "Output saved to: $output_file"
+		fi
+		return $EXIT_SUCCESS
+	else
+		local exit_code=$?
+		if [[ "$quiet" == "false" ]]; then
+			spinner::stop
+		fi
+
+		log::error "Pandoc conversion failed (exit code: $exit_code)"
+
+		# Check if error log has useful information
+		if [[ -s /tmp/pandoc_error.log ]]; then
+			log::error "Pandoc error details:"
+			cat /tmp/pandoc_error.log >&2
+		fi
+
+		# Provide specific guidance based on common errors
+		if [[ $exit_code -eq 127 ]]; then
+			log::error "Pandoc command not found. Please ensure pandoc is installed."
+			return $EXIT_DEPENDENCY_MISSING
+		elif [[ $exit_code -eq 47 ]]; then
+			log::error "PDF engine (xelatex) not found. Install LaTeX distribution:"
+			log::error "  macOS: brew install mactex"
+			log::error "  Ubuntu: sudo apt-get install texlive-xetex"
+			return $EXIT_DEPENDENCY_MISSING
+		else
+			log::error "Conversion failed. Check input file format and try again."
+			return $EXIT_CONVERSION_FAILED
+		fi
+	fi
+}
+
+validate_conversion_result() {
+	local output_file="$1"
+
+	if [[ ! -f "$output_file" ]]; then
+		log::error "Output file was not created: $output_file"
+		return 1
+	fi
+
+	if [[ ! -s "$output_file" ]]; then
+		log::error "Output file is empty: $output_file"
+		return 1
+	fi
+
+	# Basic PDF validation - check if it starts with PDF header
+	if ! head -c 4 "$output_file" | grep -q "%PDF"; then
+		log::error "Output file does not appear to be a valid PDF: $output_file"
+		return 1
+	fi
+
+	return 0
+}
+
+main() {
+	local quiet=false
+	local force=false
+	local input_file=""
+	local output_file=""
+
+	# Check dependencies first
+	if ! check_dependencies; then
+		exit $EXIT_DEPENDENCY_MISSING
+	fi
+
+	while [[ $# -gt 0 ]]; do
+		case $1 in
+		--quiet | -q)
+			quiet=true
+			shift
+			;;
+		--force | -f)
+			force=true
+			shift
+			;;
+		--help | -h | --version | -v)
+			parse_common_args "$(basename "$0")" "$@"
+			;;
+		-*)
+			log::error "Unknown option: $1"
+			echo "Use --help for usage information."
+			exit 1
+			;;
+		*)
+			if [[ -z "$input_file" ]]; then
+				input_file="$1"
+			elif [[ -z "$output_file" ]]; then
+				output_file="$1"
+			else
+				log::error "Too many arguments"
+				echo "Use --help for usage information."
+				exit 1
+			fi
+			shift
+			;;
+		esac
+	done
+
+	if [[ -z "$input_file" ]]; then
+		log::error "Input file is required"
+		echo "Use --help for usage information."
+		exit 1
+	fi
+
+	# Set default output file if not specified
+	if [[ -z "$output_file" ]]; then
+		output_file="${input_file%.*}.pdf"
+	fi
+
+	# Check if output file already exists
+	if ! check_output_file_exists "$output_file" "$quiet" "$force"; then
+		exit $EXIT_SUCCESS # User cancelled, not an error
+	fi
+
+	# Validate file permissions and paths
+	validate_file_permissions "$input_file" "$output_file"
+	local validation_result=$?
+	if [[ $validation_result -ne 0 ]]; then
+		exit $validation_result
+	fi
+
+	# Validate markdown format
+	validate_markdown_format "$input_file"
+	local format_result=$?
+	if [[ $format_result -ne 0 ]]; then
+		exit $format_result
+	fi
+
+	# Check disk space
+	check_disk_space "$input_file" "$output_file"
+	local disk_result=$?
+	if [[ $disk_result -ne 0 ]]; then
+		exit $disk_result
+	fi
+
+	# Set global output file for cleanup
+	OUTPUT_FILE="$output_file"
+
+	if [[ "$quiet" == "false" ]]; then
+		log::info "md-to-pdf tool initialized"
+		log::info "Input file: $input_file"
+		log::info "Output file: $output_file"
+	fi
+
+	# Perform the conversion
+	local conversion_result
+	conversion_result=$(convert_markdown_to_pdf "$input_file" "$output_file" "$quiet")
+	local conversion_exit=$?
+
+	if [[ $conversion_exit -ne $EXIT_SUCCESS ]]; then
+		exit $conversion_exit
+	fi
+
+	# Validate the result
+	if ! validate_conversion_result "$output_file"; then
+		log::error "Output validation failed"
+		exit $EXIT_CONVERSION_FAILED
+	fi
+
+	if [[ "$quiet" == "false" ]]; then
+		log::success "md-to-pdf conversion completed successfully!"
+	fi
+}
+
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+	main "$@"
+fi

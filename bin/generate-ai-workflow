@@ -1,0 +1,1303 @@
+#!/usr/bin/env bash
+#
+# generate-ai-workflow - Generate multi-agent AI development workflow
+#
+# Description:
+#   Creates project-specific AI workflow commands and state management files
+#   for autonomous development across different AI coding agents.
+#
+# Usage:
+#   generate-ai-workflow <project-name>
+#   generate-ai-workflow --help
+#   generate-ai-workflow --version
+#
+# Requirements:
+#   - Shell Starter framework
+#   - Write permissions in current directory
+#
+# Author: Shell Starter
+# License: MIT
+
+set -euo pipefail
+
+# Source the Shell Starter library
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LIB_DIR="$(dirname "$SCRIPT_DIR")/lib"
+
+# shellcheck source=../lib/main.sh
+source "$LIB_DIR/main.sh"
+
+# Script metadata
+SCRIPT_NAME="generate-ai-workflow"
+SCRIPT_DESCRIPTION="Generate multi-agent AI development workflow"
+
+show_help() {
+	cat <<EOF
+$SCRIPT_NAME - $SCRIPT_DESCRIPTION
+
+USAGE:
+    $SCRIPT_NAME <project-name>
+    $SCRIPT_NAME --update-tasks <project-name>
+    $SCRIPT_NAME --help
+    $SCRIPT_NAME --version
+
+ARGUMENTS:
+    project-name    Name of the project to generate workflow for
+
+OPTIONS:
+    --update-tasks  Generate specific tasks based on existing requirements.md
+
+DESCRIPTION:
+    Generates a complete AI development workflow including:
+    - State management files (.ai-workflow/state/)
+    - Multi-agent command definitions (.ai-workflow/commands/)
+    - Development task templates
+    - QA and progress tracking
+
+    Two-step workflow:
+    1. Initial generation: Creates generic templates
+    2. Task updating: Generates specific tasks from requirements.md
+
+    Supports these AI coding agents:
+    - Claude Code (.claude/commands/)
+    - Cursor (.cursor/commands/)
+    - Gemini CLI (.gemini/commands/)
+    - OpenCode (.opencode/command/)
+
+EXAMPLES:
+    $SCRIPT_NAME image-resizer              # Generate initial templates
+    $SCRIPT_NAME --update-tasks image-resizer  # Generate specific tasks from PRD
+
+WORKFLOW:
+    1. $SCRIPT_NAME my-project             # Creates generic templates
+    2. Edit .ai-workflow/state/requirements.md   # Customize your PRD
+    3. $SCRIPT_NAME --update-tasks my-project    # Generate specific tasks
+    4. /dev start                          # Begin precise development
+
+FILES CREATED:
+    .ai-workflow/state/tasks.md           - Project task breakdown (generic or specific)
+    .ai-workflow/state/requirements.md    - Feature requirements
+    .ai-workflow/state/progress.log       - Development log
+    .ai-workflow/commands/.claude/        - Claude Code commands
+    .ai-workflow/commands/.cursor/        - Cursor commands
+    .ai-workflow/commands/.gemini/        - Gemini CLI commands
+    .ai-workflow/commands/.opencode/      - OpenCode commands
+
+GUIDES:
+    docs/prompting-guide.md               - PRD generation guide for custom requirements
+    docs/journeys/ai-assisted/           - Complete development journey examples
+
+EOF
+}
+
+generate_state_files() {
+	local project_name="$1"
+
+	log::info "Creating state management files for $project_name..."
+
+	mkdir -p .ai-workflow/state
+
+	# Generate tasks.md
+	local project_upper=$(echo "$project_name" | tr '[:lower:]' '[:upper:]')
+	cat >.ai-workflow/state/tasks.md <<EOF
+# $project_name - Development Tasks
+
+This document tracks the implementation progress of the $project_name project using autonomous AI development.
+
+## Phase 1: Foundation Setup
+
+- [ ] **$project_upper-1:** Create project structure and basic executable
+  **Goal:** Create the executable script with Shell Starter template structure
+  **Actions:**
+  - [ ] **$project_upper-1.1:** Create \`bin/$project_name\` with Shell Starter template (see docs/conventions.md)
+  - [ ] **$project_upper-1.2:** Add proper shebang, header comment, and script metadata
+  - [ ] **$project_upper-1.3:** Source lib/main.sh and implement basic argument parsing structure
+  - [ ] **$project_upper-1.4:** Implement show_help() function with comprehensive usage examples
+  - [ ] **$project_upper-1.5:** Add proper main() function with argument handling loop
+  **Verification:** Script exists, is executable, shows help with --help flag
+
+- [ ] **$project_upper-2:** Implement core argument parsing and validation
+  **Goal:** Handle all command-line arguments and flags according to requirements.md
+  **Actions:**
+  - [ ] **$project_upper-2.1:** Parse all required arguments (input files, options, flags)
+  - [ ] **$project_upper-2.2:** Implement --help, --version, --preview/dry-run modes
+  - [ ] **$project_upper-2.3:** Add input validation for all parameters with helpful error messages
+  - [ ] **$project_upper-2.4:** Use log:: functions for all user feedback instead of echo
+  **Verification:** All argument combinations work, proper error messages for invalid inputs
+
+- [ ] **$project_upper-3:** Add dependency checking and environment validation
+  **Goal:** Verify all required dependencies and system requirements
+  **Actions:**
+  - [ ] **$project_upper-3.1:** Check for required external dependencies (pandoc, python, etc.)
+  - [ ] **$project_upper-3.2:** Validate file system permissions for input/output directories
+  - [ ] **$project_upper-3.3:** Check system resources if needed (disk space, memory)
+  - [ ] **$project_upper-3.4:** Provide helpful installation/setup guidance for missing requirements
+  **Verification:** Graceful handling of missing dependencies with actionable error messages
+
+## Phase 2: Core Functionality
+
+- [ ] **$project_upper-4:** Implement main feature logic
+  **Goal:** Build the core functionality that solves the user's problem
+  **Actions:**
+  - [ ] **$project_upper-4.1:** Implement the primary feature according to requirements.md specifications
+  - [ ] **$project_upper-4.2:** Handle both interactive mode (prompts) and direct mode (CLI args)
+  - [ ] **$project_upper-4.3:** Use spinner:: functions for long-running operations
+  - [ ] **$project_upper-4.4:** Implement proper file handling with path validation
+  **Verification:** Core functionality works for typical use cases
+
+- [ ] **$project_upper-5:** Add comprehensive error handling
+  **Goal:** Handle all error scenarios gracefully with helpful messages
+  **Actions:**
+  - [ ] **$project_upper-5.1:** Implement error handling for all scenarios listed in requirements.md
+  - [ ] **$project_upper-5.2:** Use appropriate exit codes (0 for success, specific codes for different errors)
+  - [ ] **$project_upper-5.3:** Add cleanup routines for interrupted operations
+  - [ ] **$project_upper-5.4:** Test and handle edge cases (empty files, special characters, etc.)
+  **Verification:** All error scenarios produce helpful messages, no crashes
+
+- [ ] **$project_upper-6:** Integrate Shell Starter UI components
+  **Goal:** Polish the user experience with consistent Shell Starter patterns
+  **Actions:**
+  - [ ] **$project_upper-6.1:** Use color:: variables for consistent output formatting
+  - [ ] **$project_upper-6.2:** Implement progress indicators with spinner:: functions
+  - [ ] **$project_upper-6.3:** Add confirmation prompts for destructive operations
+  - [ ] **$project_upper-6.4:** Ensure all logging uses log:: functions with appropriate levels
+  **Verification:** Professional CLI experience matching Shell Starter conventions
+
+## Phase 3: Advanced Features & Polish
+
+- [ ] **$project_upper-7:** Implement preview/dry-run functionality
+  **Goal:** Allow users to see what would happen without executing
+  **Actions:**
+  - [ ] **$project_upper-7.1:** Add --preview or --dry-run flag support
+  - [ ] **$project_upper-7.2:** Show detailed plan of what would be executed
+  - [ ] **$project_upper-7.3:** Display file paths, transformations, and expected outputs
+  - [ ] **$project_upper-7.4:** Include validation results and potential issues
+  **Verification:** Preview mode shows accurate representation of actual execution
+
+- [ ] **$project_upper-8:** Add advanced configuration options
+  **Goal:** Implement additional features and options from requirements.md
+  **Actions:**
+  - [ ] **$project_upper-8.1:** Add any advanced configuration flags or options
+  - [ ] **$project_upper-8.2:** Implement theme/template/style options if applicable
+  - [ ] **$project_upper-8.3:** Add batch processing or bulk operation capabilities if needed
+  - [ ] **$project_upper-8.4:** Support configuration files or presets if specified
+  **Verification:** All advanced features work correctly and integrate smoothly
+
+- [ ] **$project_upper-9:** Optimize performance and user experience
+  **Goal:** Ensure optimal performance and smooth user experience
+  **Actions:**
+  - [ ] **$project_upper-9.1:** Profile and optimize performance for typical workloads
+  - [ ] **$project_upper-9.2:** Add progress indicators for long operations
+  - [ ] **$project_upper-9.3:** Implement smart defaults and intuitive behavior
+  - [ ] **$project_upper-9.4:** Add helpful suggestions and tips in output
+  **Verification:** Good performance, intuitive usage patterns
+
+## Phase 4: Testing & Documentation
+
+- [ ] **$project_upper-10:** Create comprehensive test suite
+  **Goal:** Build complete test coverage using bats testing framework
+  **Actions:**
+  - [ ] **$project_upper-10.1:** Create tests/$project_name.bats with comprehensive test coverage
+  - [ ] **$project_upper-10.2:** Test all argument combinations and edge cases
+  - [ ] **$project_upper-10.3:** Test error conditions and validation scenarios
+  - [ ] **$project_upper-10.4:** Include integration tests with real data/files
+  **Verification:** All tests pass, good coverage of functionality and edge cases
+
+- [ ] **$project_upper-11:** Final quality assurance and polish
+  **Goal:** Ensure production-ready quality and consistency
+  **Actions:**
+  - [ ] **$project_upper-11.1:** Run shellcheck and shfmt, fix any issues
+  - [ ] **$project_upper-11.2:** Test on different platforms (macOS/Linux) if possible
+  - [ ] **$project_upper-11.3:** Verify all requirements.md items are satisfied
+  - [ ] **$project_upper-11.4:** Polish help text, error messages, and user feedback
+  **Verification:** Passes all quality checks, ready for distribution
+
+- [ ] **$project_upper-12:** Integration and distribution preparation
+  **Goal:** Prepare for integration with Shell Starter installer system
+  **Actions:**
+  - [ ] **$project_upper-12.1:** Update install.sh SCRIPTS array to include bin/$project_name
+  - [ ] **$project_upper-12.2:** Test installation and uninstallation process
+  - [ ] **$project_upper-12.3:** Verify script works when installed to different prefixes
+  - [ ] **$project_upper-12.4:** Final end-to-end testing of complete workflow
+  **Verification:** Can be installed/uninstalled correctly, works in installed environment
+
+## Development Guidelines for AI Agents
+
+### Context Management
+- Work on ONE task at a time, mark as [x] when complete
+- Save progress to progress.log after each task with timestamp
+- Read requirements.md for product context before starting each task
+- If approaching context limits, save state and request continuation
+
+### Quality Standards
+- Follow Shell Starter conventions (see docs/conventions.md)
+- Use lib/main.sh functions consistently
+- All scripts must pass shellcheck and shfmt
+- Include comprehensive error handling for all scenarios
+- Test thoroughly before marking tasks complete
+
+### Verification Steps
+After each task completion:
+- Run \`shellcheck bin/$project_name\`
+- Run \`shfmt -d bin/$project_name\`
+- Test the implemented functionality manually
+- Update progress.log with results and any issues found
+- Mark task as [x] only when verification passes
+EOF
+
+	# Generate requirements.md (Product Requirements Document)
+	cat >.ai-workflow/state/requirements.md <<EOF
+# $project_name - Product Requirements Document
+
+## Product Overview
+**REQUIRED:** Replace this template with specific project details
+
+**Target Users:** [Who will use this tool? Be specific - developers, writers, system admins, etc.]
+**Core Problem:** [What specific problem does this solve? What pain point are you addressing?]
+**Solution Approach:** [How does this tool solve the problem? What approach will it take?]
+
+## Primary Command/Tool Definition
+**CRITICAL:** Define the main command and its primary function - this drives implementation
+
+**Primary Function:** [What does this tool DO? Convert files? Analyze data? Generate reports?]
+**Main Command:** \`$project_name input [output] [options]\`
+**Dependencies:** [What external tools does this require? pandoc? imagemagick? python?]
+**Input/Output:** [What does it take as input and what does it produce?]
+
+**Example Usage:**
+\`\`\`bash
+$project_name document.md                    # Basic usage
+$project_name document.md report.pdf        # With output specification
+$project_name --help                        # Show help
+\`\`\`
+
+## User Stories
+- **US-1:** As a [specific user type], I want to [specific action] so that [specific benefit]
+- **US-2:** As a [specific user type], I want to [specific action] so that [specific benefit]  
+- **US-3:** As a [specific user type], I want to [specific action] so that [specific benefit]
+
+## Core Functionality (Implementation Requirements)
+**CRITICAL:** These define what must be implemented - be specific about the actual work
+
+- **Primary Feature:** [The main functionality - e.g., "Convert markdown to PDF using pandoc"]
+  - Implementation: [Specific command or process - e.g., "Call: pandoc input.md -o output.pdf"]
+  - Verification: [How to test it works - e.g., "Generate PDF from sample markdown file"]
+
+- **Input Validation:** [What inputs are accepted and how to validate them]
+  - File types: [.md, .txt, etc.]
+  - Validation: [Check file exists, readable, proper format]
+
+- **Error Handling:** [Specific error conditions and responses]
+  - Missing dependencies: [How to detect and guide installation]
+  - Invalid files: [What to do with bad input]
+
+## CLI Interface Requirements
+- **Interactive mode:** Prompt for input file, output location, and options
+- **Direct mode:** Accept file paths and options as command arguments
+- **Preview mode:** Show what would happen without executing (--preview flag)
+- **Help and version:** Standard --help and --version flags
+- **Progress feedback:** Show progress for long-running operations
+
+## Shell Starter Compliance
+- Follow Shell Starter conventions from docs/conventions.md
+- Use lib/main.sh and provided library functions (logging, colors, spinner, utils)
+- Include --help and --version flags with proper argument parsing
+- Use log:: functions (info, warn, error, debug) instead of echo for all output
+- Handle all error conditions gracefully with meaningful, actionable messages
+- Include progress indicators for conversion operations using spinner:: functions
+
+## Technical Implementation Details
+**CRITICAL:** Specific technical requirements for implementation
+
+- **Dependencies:** [List all required external tools with version requirements]
+- **File Handling:** [Specific file operations - read input, write output, temp files]
+- **Command Execution:** [Specific commands to run - pandoc, convert, etc.]
+- **Cross-platform:** Support macOS and Linux with proper path handling
+- **Performance:** [Specific performance requirements - file size limits, processing time]
+
+## Error Handling Scenarios
+**CRITICAL:** Specific error conditions that must be handled
+
+- **Dependency missing:** [tool] not installed - provide installation instructions for macOS/Linux
+- **File not found:** Clear error message with file path and suggestions
+- **Permission denied:** Specific guidance for read/write permission problems
+- **Invalid format:** Handle malformed input with helpful error messages
+- **Disk full:** Check available space before processing large files
+- **Interrupted operation:** Clean up partial files and provide recovery options
+
+## Success Criteria & Verification
+**CRITICAL:** How to verify the tool actually works
+
+- **Functional Test:** Tool successfully completes its primary purpose with real test data
+- **Quality:** Passes shellcheck and shfmt with no errors
+- **Integration:** Works with Shell Starter installer system
+- **User Experience:** All user stories can be completed successfully
+- **Error Handling:** All error scenarios produce helpful, actionable messages
+- **Documentation:** Comprehensive help text with examples
+
+**Manual Test Cases:**
+- [ ] Basic functionality works: [specific test case]
+- [ ] Error handling works: [test with invalid input]
+- [ ] Help and version flags work correctly
+- [ ] Progress indicators show during long operations
+EOF
+
+	# Generate progress.log
+	cat >.ai-workflow/state/progress.log <<EOF
+# $project_name - Development Progress Log
+
+## $(date '+%Y-%m-%d %H:%M:%S') - Workflow Generated
+- Created AI workflow structure
+- Generated initial task breakdown  
+- Ready to start development with /dev start
+
+EOF
+}
+
+generate_specific_tasks() {
+	local project_name="$1"
+
+	if [[ ! -f ".ai-workflow/state/requirements.md" ]]; then
+		log::error "requirements.md not found. Run '$SCRIPT_NAME $project_name' first."
+		exit 1
+	fi
+
+	log::info "Analyzing requirements.md and generating specific tasks..."
+
+	# Use AI to generate specific tasks directly
+	spinner::start "Generating project-specific tasks from PRD"
+
+	# Create temporary file with AI instructions
+	local ai_prompt=$(mktemp)
+	cat >"$ai_prompt" <<EOF
+Analyze the following PRD and generate a specific tasks.md file for the "$project_name" project.
+
+Create detailed, actionable tasks based on the actual features and requirements in the PRD.
+Use $(echo "$project_name" | tr '[:lower:]' '[:upper:]')-X.Y task codes.
+Focus on the specific features mentioned, not generic CLI development.
+
+PRD Content:
+$(cat .ai-workflow/state/requirements.md)
+
+Generate a complete tasks.md file with:
+1. Project-specific tasks based on PRD features
+2. Hierarchical sub-tasks with clear actions
+3. Proper verification steps
+4. Logical development phases
+
+Output the complete markdown content for tasks.md:
+EOF
+
+	# Generate specific tasks using AI (this would call an AI service)
+	# For now, we'll create a more intelligent template based on the PRD
+	analyze_prd_and_generate_tasks "$project_name" "$ai_prompt"
+
+	spinner::stop
+	rm "$ai_prompt"
+
+	log::info "✓ Generated specific tasks based on your PRD"
+	log::info "Review .ai-workflow/state/tasks.md to see project-specific implementation steps"
+}
+
+analyze_prd_and_generate_tasks() {
+	local project_name="$1"
+	local ai_prompt="$2"
+	local project_upper=$(echo "$project_name" | tr '[:lower:]' '[:upper:]')
+
+	# Read and analyze the PRD content
+	local prd_content=$(cat ".ai-workflow/state/requirements.md")
+
+	# Extract key features and create specific tasks
+	# This is a simplified version - in production this would use actual AI
+	create_intelligent_tasks "$project_name" "$project_upper" "$prd_content"
+}
+
+# Helper function to detect tool purpose from PRD
+detect_tool_purpose() {
+	local prd_content="$1"
+
+	# Analyze the PRD to determine what the tool actually does
+	if echo "$prd_content" | grep -qi "convert.*markdown.*pdf\|markdown.*to.*pdf"; then
+		echo "markdown to PDF converter"
+	elif echo "$prd_content" | grep -qi "convert.*\|transformation\|format"; then
+		echo "file converter"
+	elif echo "$prd_content" | grep -qi "process.*image\|resize.*image\|image.*manipulation"; then
+		echo "image processor"
+	elif echo "$prd_content" | grep -qi "analyze.*\|analysis\|report"; then
+		echo "analyzer tool"
+	elif echo "$prd_content" | grep -qi "generate.*\|generator\|create.*file"; then
+		echo "file generator"
+	elif echo "$prd_content" | grep -qi "backup\|sync\|copy"; then
+		echo "file management tool"
+	else
+		echo "CLI utility"
+	fi
+}
+
+# Helper function to extract primary dependency from PRD
+extract_primary_dependency() {
+	local prd_content="$1"
+
+	# Look for explicit dependency mentions
+	if echo "$prd_content" | grep -qi "pandoc"; then
+		echo "pandoc"
+	elif echo "$prd_content" | grep -qi "imagemagick\|convert"; then
+		echo "imagemagick"
+	elif echo "$prd_content" | grep -qi "ffmpeg"; then
+		echo "ffmpeg"
+	elif echo "$prd_content" | grep -qi "python"; then
+		echo "python"
+	elif echo "$prd_content" | grep -qi "node\|npm"; then
+		echo "nodejs"
+	else
+		echo ""
+	fi
+}
+
+# Helper function to extract input/output pattern from PRD
+extract_io_pattern() {
+	local prd_content="$1"
+
+	# Look for input/output patterns
+	if echo "$prd_content" | grep -qi "markdown.*pdf\|\.md.*\.pdf"; then
+		echo "markdown_to_pdf"
+	elif echo "$prd_content" | grep -qi "image.*resize\|\.jpg.*\.jpg"; then
+		echo "image_processing"
+	elif echo "$prd_content" | grep -qi "directory.*file\|multiple.*files"; then
+		echo "batch_processing"
+	else
+		echo "single_file"
+	fi
+}
+
+# Helper function to generate primary action based on tool analysis
+generate_primary_action() {
+	local tool_purpose="$1"
+	local primary_dependency="$2"
+	local input_output_pattern="$3"
+
+	case "$tool_purpose" in
+	"markdown to PDF converter")
+		echo "Call pandoc with proper arguments: pandoc \"\$input_file\" -o \"\$output_file\" --pdf-engine=xelatex"
+		;;
+	"file converter")
+		if [[ "$primary_dependency" == "pandoc" ]]; then
+			echo "Execute pandoc conversion command with error handling and progress feedback"
+		elif [[ "$primary_dependency" == "imagemagick" ]]; then
+			echo "Execute ImageMagick convert command with proper error handling"
+		else
+			echo "Execute the primary conversion command for the target format"
+		fi
+		;;
+	"image processor")
+		echo "Execute image processing commands (resize, format, optimize) using appropriate tools"
+		;;
+	"analyzer tool")
+		echo "Run analysis algorithm on input data and generate structured report output"
+		;;
+	"file generator")
+		echo "Generate output files based on input parameters and templates"
+		;;
+	"file management tool")
+		echo "Execute file operations (copy, move, sync) with progress tracking and verification"
+		;;
+	*)
+		echo "Execute the primary functionality that solves the user's core problem"
+		;;
+	esac
+}
+
+create_intelligent_tasks() {
+	local project_name="$1"
+	local project_upper="$2"
+	local prd_content="$3"
+
+	# Analyze PRD content for tool type and core functionality
+	local tool_purpose=$(detect_tool_purpose "$prd_content")
+	local primary_dependency=$(extract_primary_dependency "$prd_content")
+	local input_output_pattern=$(extract_io_pattern "$prd_content")
+
+	# Feature detection (keeping existing logic)
+	local has_interactive_mode=$(echo "$prd_content" | grep -i "interactive" && echo "true" || echo "false")
+	local has_themes=$(echo "$prd_content" | grep -i "theme" && echo "true" || echo "false")
+	local has_preview=$(echo "$prd_content" | grep -i "preview\|dry-run" && echo "true" || echo "false")
+	local has_file_processing=$(echo "$prd_content" | grep -i "file\|convert\|process" && echo "true" || echo "false")
+	local dependencies=$(echo "$prd_content" | grep -i "pandoc\|dependency" | head -1)
+
+	# Use dynamic task counter to ensure sequential numbering
+	local task_counter=1
+
+	# Generate specific tasks based on detected features
+	cat >".ai-workflow/state/tasks.md" <<EOF
+# $project_name - Development Tasks
+
+This document tracks the implementation progress of the $project_name project using autonomous AI development.
+
+## Phase 1: Foundation Setup
+
+- [ ] **$project_upper-$task_counter:** Create project structure and basic executable
+  **Goal:** Create the executable script with Shell Starter template structure
+  **Actions:**
+  - [ ] **$project_upper-$task_counter.1:** Create \`bin/$project_name\` with Shell Starter template (see docs/conventions.md)
+  - [ ] **$project_upper-$task_counter.2:** Add proper shebang, header comment, and script metadata
+  - [ ] **$project_upper-$task_counter.3:** Source lib/main.sh and implement basic argument parsing structure
+  - [ ] **$project_upper-$task_counter.4:** Implement show_help() function with comprehensive usage examples
+  - [ ] **$project_upper-$task_counter.5:** Add proper main() function with argument handling loop
+  **Verification:** Script exists, is executable, shows help with --help flag
+
+EOF
+
+	# Increment counter
+	((task_counter++))
+
+	# Add dependency checking if detected
+	if [[ "$dependencies" != "" ]] || [[ "$primary_dependency" != "" ]]; then
+		cat >>".ai-workflow/state/tasks.md" <<EOF
+- [ ] **$project_upper-$task_counter:** Implement dependency checking and validation
+  **Goal:** Verify all required dependencies and system requirements
+  **Actions:**
+  - [ ] **$project_upper-$task_counter.1:** Check for required external dependencies ($primary_dependency, etc.)
+  - [ ] **$project_upper-$task_counter.2:** Validate file system permissions for input/output directories
+  - [ ] **$project_upper-$task_counter.3:** Provide helpful installation/setup guidance for missing requirements
+  - [ ] **$project_upper-$task_counter.4:** Add dependency version checking if applicable
+  **Verification:** Graceful handling of missing dependencies with actionable error messages
+
+EOF
+		((task_counter++))
+	fi
+
+	# CRITICAL: Always add core implementation task - this was missing!
+	cat >>".ai-workflow/state/tasks.md" <<EOF
+## Phase 2: Core Implementation
+
+- [ ] **$project_upper-$task_counter:** Implement primary functionality - $tool_purpose
+  **Goal:** Build the core feature that solves the user's primary problem
+  **Actions:**
+  - [ ] **$project_upper-$task_counter.1:** $(generate_primary_action "$tool_purpose" "$primary_dependency" "$input_output_pattern")
+  - [ ] **$project_upper-$task_counter.2:** Handle command execution errors and provide meaningful error messages
+  - [ ] **$project_upper-$task_counter.3:** Validate input/output and ensure successful completion
+  - [ ] **$project_upper-$task_counter.4:** Add progress indicators and user feedback during operation
+  **Verification:** Tool successfully completes its primary purpose with test data - MUST ACTUALLY WORK
+
+EOF
+	((task_counter++))
+
+	# Add interactive mode if detected
+	if [[ "$has_interactive_mode" == "true" ]]; then
+		cat >>".ai-workflow/state/tasks.md" <<EOF
+- [ ] **$project_upper-$task_counter:** Implement interactive mode functionality
+  **Goal:** Create user-friendly interactive prompts for all required inputs
+  **Actions:**
+  - [ ] **$project_upper-$task_counter.1:** Design interactive prompt flow and user experience
+  - [ ] **$project_upper-$task_counter.2:** Implement input validation for interactive responses
+  - [ ] **$project_upper-$task_counter.3:** Add confirmation steps for destructive operations
+  - [ ] **$project_upper-$task_counter.4:** Handle user cancellation and error recovery
+  **Verification:** Interactive mode guides users through complete workflows
+
+EOF
+		((task_counter++))
+	fi
+
+	# Add file processing if detected (but make it specific, not generic)
+	if [[ "$has_file_processing" == "true" ]]; then
+		cat >>".ai-workflow/state/tasks.md" <<EOF
+- [ ] **$project_upper-$task_counter:** Implement advanced file handling
+  **Goal:** Add robust file processing capabilities beyond basic functionality
+  **Actions:**
+  - [ ] **$project_upper-$task_counter.1:** Add support for multiple file formats and edge cases
+  - [ ] **$project_upper-$task_counter.2:** Implement batch processing if multiple files supported
+  - [ ] **$project_upper-$task_counter.3:** Add file validation, backup, and recovery mechanisms
+  - [ ] **$project_upper-$task_counter.4:** Handle special characters, spaces, and path edge cases
+  **Verification:** Advanced file handling works with various file types and scenarios
+
+EOF
+		((task_counter++))
+	fi
+
+	# Add theme system if detected
+	if [[ "$has_themes" == "true" ]]; then
+		cat >>".ai-workflow/state/tasks.md" <<EOF
+- [ ] **$project_upper-$task_counter:** Implement theme system
+  **Goal:** Create theme selection and application functionality
+  **Actions:**
+  - [ ] **$project_upper-$task_counter.1:** Design theme system architecture and file structure
+  - [ ] **$project_upper-$task_counter.2:** Implement built-in themes (GitHub, Academic, Clean, Modern)
+  - [ ] **$project_upper-$task_counter.3:** Add theme selection validation and error handling
+  - [ ] **$project_upper-$task_counter.4:** Create theme preview functionality
+  **Verification:** All themes work correctly and can be selected/applied
+
+EOF
+		((task_counter++))
+	fi
+
+	# Add preview mode if detected
+	if [[ "$has_preview" == "true" ]]; then
+		cat >>".ai-workflow/state/tasks.md" <<EOF
+- [ ] **$project_upper-$task_counter:** Implement preview/dry-run mode
+  **Goal:** Allow users to see what would happen without executing
+  **Actions:**
+  - [ ] **$project_upper-$task_counter.1:** Add --preview or --dry-run flag support
+  - [ ] **$project_upper-$task_counter.2:** Show detailed plan of what would be executed
+  - [ ] **$project_upper-$task_counter.3:** Display file paths, transformations, and expected outputs
+  - [ ] **$project_upper-$task_counter.4:** Include validation results and potential issues
+  **Verification:** Preview mode shows accurate representation of actual execution
+
+EOF
+		((task_counter++))
+	fi
+
+	# Add final phases
+	cat >>".ai-workflow/state/tasks.md" <<EOF
+## Phase 3: Quality & Polish
+
+- [ ] **$project_upper-$task_counter:** Add comprehensive error handling
+  **Goal:** Handle all error scenarios gracefully with helpful messages
+  **Actions:**
+  - [ ] **$project_upper-$task_counter.1:** Implement error handling for all scenarios listed in requirements.md
+  - [ ] **$project_upper-$task_counter.2:** Use appropriate exit codes (0 for success, specific codes for different errors)
+  - [ ] **$project_upper-$task_counter.3:** Add cleanup routines for interrupted operations
+  - [ ] **$project_upper-$task_counter.4:** Test and handle edge cases (empty files, special characters, etc.)
+  **Verification:** All error scenarios produce helpful messages, no crashes
+
+EOF
+	((task_counter++))
+
+	cat >>".ai-workflow/state/tasks.md" <<EOF
+- [ ] **$project_upper-$task_counter:** Polish user experience and Shell Starter integration
+  **Goal:** Ensure professional CLI experience with Shell Starter patterns
+  **Actions:**
+  - [ ] **$project_upper-$task_counter.1:** Use color:: variables for consistent output formatting
+  - [ ] **$project_upper-$task_counter.2:** Ensure all logging uses log:: functions with appropriate levels
+  - [ ] **$project_upper-$task_counter.3:** Add confirmation prompts for destructive operations
+  - [ ] **$project_upper-$task_counter.4:** Implement smart defaults and intuitive behavior
+  **Verification:** Professional CLI experience matching Shell Starter conventions
+
+EOF
+	((task_counter++))
+
+	cat >>".ai-workflow/state/tasks.md" <<EOF
+## Phase 4: Testing & Documentation
+
+- [ ] **$project_upper-$task_counter:** Create comprehensive test suite
+  **Goal:** Build complete test coverage using bats testing framework
+  **Actions:**
+  - [ ] **$project_upper-$task_counter.1:** Create tests/$project_name.bats with comprehensive test coverage
+  - [ ] **$project_upper-$task_counter.2:** Test all argument combinations and edge cases
+  - [ ] **$project_upper-$task_counter.3:** Test error conditions and validation scenarios
+  - [ ] **$project_upper-$task_counter.4:** Include integration tests with real data/files
+  **Verification:** All tests pass, good coverage of functionality and edge cases
+
+EOF
+	((task_counter++))
+
+	cat >>".ai-workflow/state/tasks.md" <<EOF
+- [ ] **$project_upper-$task_counter:** Final quality assurance and distribution preparation
+  **Goal:** Ensure production-ready quality and Shell Starter integration
+  **Actions:**
+  - [ ] **$project_upper-$task_counter.1:** Run shellcheck and shfmt, fix any issues
+  - [ ] **$project_upper-$task_counter.2:** Update install.sh SCRIPTS array to include bin/$project_name
+  - [ ] **$project_upper-$task_counter.3:** Verify all requirements.md items are satisfied
+  - [ ] **$project_upper-$task_counter.4:** Final end-to-end testing of complete workflow
+  **Verification:** Passes all quality checks, ready for distribution
+
+## Development Guidelines for AI Agents
+
+### Context Management
+- Work on ONE task at a time, mark as [x] when complete
+- Save progress to progress.log after each task with timestamp
+- Read requirements.md for product context before starting each task
+- If approaching context limits, save state and request continuation
+
+### Quality Standards
+- Follow Shell Starter conventions (see docs/conventions.md)
+- Use lib/main.sh functions consistently
+- All scripts must pass shellcheck and shfmt
+- Include comprehensive error handling for all scenarios
+- Test thoroughly before marking tasks complete
+
+### Verification Steps
+After each task completion:
+- Run \`shellcheck bin/$project_name\`
+- Run \`shfmt -d bin/$project_name\`
+- Test the implemented functionality manually
+- Update progress.log with results and any issues found
+- Mark task as [x] only when verification passes
+EOF
+
+	# Generate requirements.md (Product Requirements Document)
+	cat >.ai-workflow/state/requirements.md <<EOF
+# $project_name - Product Requirements Document
+
+## Product Overview
+**REQUIRED:** Replace this template with specific project details
+
+**Target Users:** [Who will use this tool? Be specific - developers, writers, system admins, etc.]
+**Core Problem:** [What specific problem does this solve? What pain point are you addressing?]
+**Solution Approach:** [How does this tool solve the problem? What approach will it take?]
+
+## Primary Command/Tool Definition
+**CRITICAL:** Define the main command and its primary function - this drives implementation
+
+**Primary Function:** [What does this tool DO? Convert files? Analyze data? Generate reports?]
+**Main Command:** \`$project_name input [output] [options]\`
+**Dependencies:** [What external tools does this require? pandoc? imagemagick? python?]
+**Input/Output:** [What does it take as input and what does it produce?]
+
+**Example Usage:**
+\`\`\`bash
+$project_name document.md                    # Basic usage
+$project_name document.md report.pdf        # With output specification
+$project_name --help                        # Show help
+\`\`\`
+
+## User Stories
+- **US-1:** As a [specific user type], I want to [specific action] so that [specific benefit]
+- **US-2:** As a [specific user type], I want to [specific action] so that [specific benefit]  
+- **US-3:** As a [specific user type], I want to [specific action] so that [specific benefit]
+
+## Core Functionality (Implementation Requirements)
+**CRITICAL:** These define what must be implemented - be specific about the actual work
+
+- **Primary Feature:** [The main functionality - e.g., "Convert markdown to PDF using pandoc"]
+  - Implementation: [Specific command or process - e.g., "Call: pandoc input.md -o output.pdf"]
+  - Verification: [How to test it works - e.g., "Generate PDF from sample markdown file"]
+
+- **Input Validation:** [What inputs are accepted and how to validate them]
+  - File types: [.md, .txt, etc.]
+  - Validation: [Check file exists, readable, proper format]
+
+- **Error Handling:** [Specific error conditions and responses]
+  - Missing dependencies: [How to detect and guide installation]
+  - Invalid files: [What to do with bad input]
+
+## CLI Interface Requirements
+- **Interactive mode:** Prompt for input file, output location, and options
+- **Direct mode:** Accept file paths and options as command arguments
+- **Preview mode:** Show what would happen without executing (--preview flag)
+- **Help and version:** Standard --help and --version flags
+- **Progress feedback:** Show progress for long-running operations
+
+## Shell Starter Compliance
+- Follow Shell Starter conventions from docs/conventions.md
+- Use lib/main.sh and provided library functions (logging, colors, spinner, utils)
+- Include --help and --version flags with proper argument parsing
+- Use log:: functions (info, warn, error, debug) instead of echo for all output
+- Handle all error conditions gracefully with meaningful, actionable messages
+- Include progress indicators for conversion operations using spinner:: functions
+
+## Technical Implementation Details
+**CRITICAL:** Specific technical requirements for implementation
+
+- **Dependencies:** [List all required external tools with version requirements]
+- **File Handling:** [Specific file operations - read input, write output, temp files]
+- **Command Execution:** [Specific commands to run - pandoc, convert, etc.]
+- **Cross-platform:** Support macOS and Linux with proper path handling
+- **Performance:** [Specific performance requirements - file size limits, processing time]
+
+## Error Handling Scenarios
+**CRITICAL:** Specific error conditions that must be handled
+
+- **Dependency missing:** [tool] not installed - provide installation instructions for macOS/Linux
+- **File not found:** Clear error message with file path and suggestions
+- **Permission denied:** Specific guidance for read/write permission problems
+- **Invalid format:** Handle malformed input with helpful error messages
+- **Disk full:** Check available space before processing large files
+- **Interrupted operation:** Clean up partial files and provide recovery options
+
+## Success Criteria & Verification
+**CRITICAL:** How to verify the tool actually works
+
+- **Functional Test:** Tool successfully completes its primary purpose with real test data
+- **Quality:** Passes shellcheck and shfmt with no errors
+- **Integration:** Works with Shell Starter installer system
+- **User Experience:** All user stories can be completed successfully
+- **Error Handling:** All error scenarios produce helpful, actionable messages
+- **Documentation:** Comprehensive help text with examples
+
+**Manual Test Cases:**
+- [ ] Basic functionality works: [specific test case]
+- [ ] Error handling works: [test with invalid input]
+- [ ] Help and version flags work correctly
+- [ ] Progress indicators show during long operations
+EOF
+
+	# Generate progress.log
+	cat >.ai-workflow/state/progress.log <<EOF
+# $project_name - Development Progress Log
+
+## $(date '+%Y-%m-%d %H:%M:%S') - Workflow Generated
+- Created AI workflow structure
+- Generated initial task breakdown  
+- Ready to start development with /dev start
+
+EOF
+}
+
+generate_claude_commands() {
+	local project_name="$1"
+
+	mkdir -p .ai-workflow/commands/.claude/commands
+
+	# /dev command
+	cat >.ai-workflow/commands/.claude/commands/dev.md <<'EOF'
+---
+description: Autonomous development cycle for current project
+argument-hint: [start|status]
+---
+
+You are managing autonomous development for the current project. Follow this protocol exactly.
+
+**Arguments:**
+- No args or "start": Initialize/resume development cycle
+- "status": Show current development state only
+
+Handle argument: $ARGUMENTS
+
+**AUTONOMOUS DEVELOPMENT PROTOCOL:**
+
+1. **READ STATE** (always check current state first):
+   - Read `.ai-workflow/state/tasks.md` - Find next incomplete task `[ ]`
+   - Read `.ai-workflow/state/requirements.md` - Understand project goals
+   - Read `.ai-workflow/state/progress.log` - Check recent progress
+
+2. **ANALYZE** (determine what to do):
+   - Identify the next incomplete task from tasks.md
+   - Understand what this task requires
+   - Check if any previous work needs to be continued
+
+3. **ACT** (execute development work):
+   - Work on ONLY the current incomplete task
+   - Follow Shell Starter conventions and patterns
+   - Create/modify files as needed for this specific task
+   - Use proper logging, error handling, and Shell Starter functions
+
+4. **VERIFY** (quality assurance):
+   - Run `shellcheck` on any shell scripts created/modified
+   - Run `shfmt -d` to check formatting
+   - Test the functionality manually if applicable
+   - Ensure the task is actually complete
+
+5. **UPDATE STATE** (record progress):
+   - Mark completed tasks with `[x]` in tasks.md
+   - Add detailed progress entry to progress.log with timestamp
+   - Identify next task or mark project complete
+
+**CONTEXT MANAGEMENT:**
+- When approaching context limits, save all progress to state files
+- End with: "Continue development with: /dev"
+- Never leave work in incomplete state
+
+**OUTPUT FORMAT:**
+```
+🔄 AUTONOMOUS DEVELOPMENT CYCLE
+Current Task: [task code and description]
+Action: [what you're implementing]
+Progress: [current progress status]
+Next: [next task or completion status]
+```
+
+Begin autonomous development now.
+EOF
+
+	# /qa command
+	cat >.ai-workflow/commands/.claude/commands/qa.md <<'EOF'
+---
+description: Quality assurance for AI-developed project
+---
+
+You are a Quality Assurance engineer for the current AI-developed project.
+
+**Protocol:**
+1. Read `.ai-workflow/state/tasks.md` to understand what's been built
+2. Read `.ai-workflow/state/progress.log` to see recent changes
+3. Run comprehensive QA checks on all developed components
+4. Log results to progress.log
+5. Provide actionable feedback
+
+**QA Checklist:**
+- [ ] Shellcheck passes on all shell scripts
+- [ ] Shfmt formatting is correct  
+- [ ] Help text is comprehensive and accurate
+- [ ] Version flag works correctly
+- [ ] All error conditions handled gracefully
+- [ ] Manual functionality testing successful
+- [ ] Shell Starter conventions followed
+- [ ] Code quality and maintainability
+
+**Output Format:**
+```
+🔍 QA REPORT
+Files Checked: [list of files]
+Issues Found: [number]
+Critical: [blocking issues]
+Warnings: [non-blocking issues] 
+Status: [PASS/FAIL with next steps]
+```
+
+Begin QA analysis now.
+EOF
+
+	# /status command
+	cat >.ai-workflow/commands/.claude/commands/status.md <<'EOF'
+---
+description: Show current project development status
+---
+
+You are a project manager. Show the current development status.
+
+**Protocol:**
+1. Read `.ai-workflow/state/tasks.md` and parse the checklist
+2. Read `.ai-workflow/state/progress.log` for recent activity  
+3. Provide a concise status summary
+
+**Output Format:**
+```
+📊 PROJECT STATUS
+Next Task: [first incomplete task]
+Progress: [X/Y tasks completed]
+Recent Activity: [latest progress.log entry]
+Ready for: [/dev, /qa, or completion]
+```
+EOF
+}
+
+generate_other_agent_commands() {
+	local project_name="$1"
+
+	# Cursor commands (markdown format)
+	mkdir -p .ai-workflow/commands/.cursor/commands
+	cp .ai-workflow/commands/.claude/commands/dev.md .ai-workflow/commands/.cursor/commands/
+	cp .ai-workflow/commands/.claude/commands/qa.md .ai-workflow/commands/.cursor/commands/
+	cp .ai-workflow/commands/.claude/commands/status.md .ai-workflow/commands/.cursor/commands/
+
+	# OpenCode commands (markdown format with frontmatter)
+	mkdir -p .ai-workflow/commands/.opencode/command
+
+	cat >.ai-workflow/commands/.opencode/command/dev.md <<'EOF'
+---
+description: Autonomous development cycle for current project
+agent: build
+---
+
+You are managing autonomous development for the current project. Follow this protocol exactly.
+
+**Arguments:**
+- No args or "start": Initialize/resume development cycle
+- "status": Show current development state only
+
+Handle argument: $ARGUMENTS
+
+**AUTONOMOUS DEVELOPMENT PROTOCOL:**
+
+1. **READ STATE** (always check current state first):
+   - Read `.ai-workflow/state/tasks.md` - Find next incomplete task `[ ]`
+   - Read `.ai-workflow/state/requirements.md` - Understand project goals
+   - Read `.ai-workflow/state/progress.log` - Check recent progress
+
+2. **ANALYZE** (determine what to do):
+   - Identify the next incomplete task from tasks.md
+   - Understand what this task requires
+   - Check if any previous work needs to be continued
+
+3. **ACT** (execute development work):
+   - Work on ONLY the current incomplete task
+   - Follow Shell Starter conventions and patterns
+   - Create/modify files as needed for this specific task
+   - Use proper logging, error handling, and Shell Starter functions
+
+4. **VERIFY** (quality assurance):
+   - Run `shellcheck` on any shell scripts created/modified
+   - Run `shfmt -d` to check formatting
+   - Test the functionality manually if applicable
+   - Ensure the task is actually complete
+
+5. **UPDATE STATE** (record progress):
+   - Mark completed tasks with `[x]` in tasks.md
+   - Add detailed progress entry to progress.log with timestamp
+   - Identify next task or mark project complete
+
+**CONTEXT MANAGEMENT:**
+- When approaching context limits, save all progress to state files
+- End with: "Continue development with: /dev"
+- Never leave work in incomplete state
+
+**OUTPUT FORMAT:**
+```
+🔄 AUTONOMOUS DEVELOPMENT CYCLE
+Current Task: [task code and description]
+Action: [what you're implementing]
+Progress: [current progress status]
+Next: [next task or completion status]
+```
+
+Begin autonomous development now.
+EOF
+
+	cat >.ai-workflow/commands/.opencode/command/qa.md <<'EOF'
+---
+description: Quality assurance for AI-developed project
+agent: build
+---
+
+You are a Quality Assurance engineer for the current AI-developed project.
+
+**Protocol:**
+1. Read `.ai-workflow/state/tasks.md` to understand what's been built
+2. Read `.ai-workflow/state/progress.log` to see recent changes
+3. Run comprehensive QA checks on all developed components
+4. Log results to progress.log
+5. Provide actionable feedback
+
+**QA Checklist:**
+- [ ] Shellcheck passes on all shell scripts
+- [ ] Shfmt formatting is correct  
+- [ ] Help text is comprehensive and accurate
+- [ ] Version flag works correctly
+- [ ] All error conditions handled gracefully
+- [ ] Manual functionality testing successful
+- [ ] Shell Starter conventions followed
+- [ ] Code quality and maintainability
+
+**Output Format:**
+```
+🔍 QA REPORT
+Files Checked: [list of files]
+Issues Found: [number]
+Critical: [blocking issues]
+Warnings: [non-blocking issues] 
+Status: [PASS/FAIL with next steps]
+```
+
+Begin QA analysis now.
+EOF
+
+	cat >.ai-workflow/commands/.opencode/command/status.md <<'EOF'
+---
+description: Show current project development status
+agent: plan
+---
+
+You are a project manager. Show the current development status.
+
+**Protocol:**
+1. Read `.ai-workflow/state/tasks.md` and parse the checklist
+2. Read `.ai-workflow/state/progress.log` for recent activity  
+3. Provide a concise status summary
+
+**Output Format:**
+```
+📊 PROJECT STATUS
+Next Task: [first incomplete task]
+Progress: [X/Y tasks completed]
+Recent Activity: [latest progress.log entry]
+Ready for: [/dev, /qa, or completion]
+```
+EOF
+
+	# Gemini commands (TOML format)
+	mkdir -p .ai-workflow/commands/.gemini/commands
+
+	cat >.ai-workflow/commands/.gemini/commands/dev.toml <<'EOF'
+description = "Autonomous development cycle for current project"
+prompt = """
+You are managing autonomous development for the current project. Follow this protocol exactly.
+
+**Arguments:**
+- No args or "start": Initialize/resume development cycle
+- "status": Show current development state only
+
+Handle argument: {{args}}
+
+**AUTONOMOUS DEVELOPMENT PROTOCOL:**
+
+1. **READ STATE** (always check current state first):
+   - Read `.ai-workflow/state/tasks.md` - Find next incomplete task `[ ]`
+   - Read `.ai-workflow/state/requirements.md` - Understand project goals
+   - Read `.ai-workflow/state/progress.log` - Check recent progress
+
+2. **ANALYZE** (determine what to do):
+   - Identify the next incomplete task from tasks.md
+   - Understand what this task requires
+   - Check if any previous work needs to be continued
+
+3. **ACT** (execute development work):
+   - Work on ONLY the current incomplete task
+   - Follow Shell Starter conventions and patterns
+   - Create/modify files as needed for this specific task
+   - Use proper logging, error handling, and Shell Starter functions
+
+4. **VERIFY** (quality assurance):
+   - Run `shellcheck` on any shell scripts created/modified
+   - Run `shfmt -d` to check formatting
+   - Test the functionality manually if applicable
+   - Ensure the task is actually complete
+
+5. **UPDATE STATE** (record progress):
+   - Mark completed tasks with `[x]` in tasks.md
+   - Add detailed progress entry to progress.log with timestamp
+   - Identify next task or mark project complete
+
+**CONTEXT MANAGEMENT:**
+- When approaching context limits, save all progress to state files
+- End with: "Continue development with: /dev"
+- Never leave work in incomplete state
+
+**OUTPUT FORMAT:**
+```
+🔄 AUTONOMOUS DEVELOPMENT CYCLE
+Current Task: [task code and description]
+Action: [what you're implementing]
+Progress: [current progress status]
+Next: [next task or completion status]
+```
+
+Begin autonomous development now.
+"""
+EOF
+
+	cat >.ai-workflow/commands/.gemini/commands/qa.toml <<'EOF'
+description = "Quality assurance for AI-developed project"
+prompt = """
+You are a Quality Assurance engineer for the current AI-developed project.
+
+**Protocol:**
+1. Read `.ai-workflow/state/tasks.md` to understand what's been built
+2. Read `.ai-workflow/state/progress.log` to see recent changes
+3. Run comprehensive QA checks on all developed components
+4. Log results to progress.log
+5. Provide actionable feedback
+
+**QA Checklist:**
+- [ ] Shellcheck passes on all shell scripts
+- [ ] Shfmt formatting is correct  
+- [ ] Help text is comprehensive and accurate
+- [ ] Version flag works correctly
+- [ ] All error conditions handled gracefully
+- [ ] Manual functionality testing successful
+- [ ] Shell Starter conventions followed
+- [ ] Code quality and maintainability
+
+**Output Format:**
+```
+🔍 QA REPORT
+Files Checked: [list of files]
+Issues Found: [number]
+Critical: [blocking issues]
+Warnings: [non-blocking issues] 
+Status: [PASS/FAIL with next steps]
+```
+
+Begin QA analysis now.
+"""
+EOF
+
+	cat >.ai-workflow/commands/.gemini/commands/status.toml <<'EOF'
+description = "Show current project development status" 
+prompt = """
+You are a project manager. Show the current development status.
+
+**Protocol:**
+1. Read `.ai-workflow/state/tasks.md` and parse the checklist
+2. Read `.ai-workflow/state/progress.log` for recent activity  
+3. Provide a concise status summary
+
+**Output Format:**
+```
+📊 PROJECT STATUS
+Next Task: [first incomplete task]
+Progress: [X/Y tasks completed]
+Recent Activity: [latest progress.log entry]
+Ready for: [/dev, /qa, or completion]
+```
+"""
+EOF
+}
+
+main() {
+	local project_name=""
+	local update_tasks=false
+
+	while [[ $# -gt 0 ]]; do
+		case $1 in
+		--help | -h | --version | -v)
+			parse_common_args "$SCRIPT_NAME" "$@"
+			;;
+		--update-tasks)
+			update_tasks=true
+			shift
+			;;
+		-*)
+			log::error "Unknown option: $1"
+			echo "Use --help for usage information."
+			exit 1
+			;;
+		*)
+			project_name="$1"
+			shift
+			;;
+		esac
+	done
+
+	if [[ -z "$project_name" ]]; then
+		log::error "Project name is required"
+		log::info "Usage: $SCRIPT_NAME <project-name>"
+		exit 1
+	fi
+
+	# Validate project name (alphanumeric, hyphens, underscores)
+	if [[ ! "$project_name" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+		log::error "Project name must contain only letters, numbers, hyphens, and underscores"
+		exit 1
+	fi
+
+	if [[ "$update_tasks" == true ]]; then
+		# Update tasks mode
+		if [[ ! -d ".ai-workflow" ]]; then
+			log::error "No existing .ai-workflow directory found"
+			log::info "Run '$SCRIPT_NAME $project_name' first to generate initial templates"
+			exit 1
+		fi
+
+		log::info "Updating tasks for project: $project_name"
+		generate_specific_tasks "$project_name"
+
+		log::info "✓ Updated tasks.md with project-specific implementation steps"
+		log::info "Ready to start development with: /dev start"
+	else
+		# Initial generation mode
+		log::info "Generating AI workflow for project: $project_name"
+
+		# Check if .ai-workflow already exists
+		if [[ -d ".ai-workflow" ]]; then
+			log::warn "Existing .ai-workflow directory found"
+			log::info "This will overwrite existing workflow files"
+			read -p "Continue? (y/N): " -n 1 -r
+			echo
+			if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+				log::info "Cancelled"
+				exit 0
+			fi
+		fi
+
+		# Generate all components
+		generate_state_files "$project_name"
+		generate_claude_commands "$project_name"
+		generate_other_agent_commands "$project_name"
+
+		log::info "✓ AI workflow generated successfully!"
+		echo
+		log::info "Next steps:"
+		log::info "1. Edit .ai-workflow/state/requirements.md with your project details"
+		log::info "   • Use docs/prompting-guide.md for help generating comprehensive PRDs"
+		log::info "2. Generate specific tasks: $SCRIPT_NAME --update-tasks $project_name"
+		log::info "3. Copy commands to your AI coding agent:"
+		log::info "   • Claude Code:  mkdir -p .claude && cp -r .ai-workflow/commands/.claude/commands .claude/"
+		log::info "   • Cursor:       mkdir -p .cursor && cp -r .ai-workflow/commands/.cursor/commands .cursor/"
+		log::info "   • Gemini CLI:   mkdir -p .gemini && cp -r .ai-workflow/commands/.gemini/commands .gemini/"
+		log::info "   • OpenCode:     mkdir -p .opencode && cp -r .ai-workflow/commands/.opencode/command .opencode/"
+		log::info "4. Start development with: /dev start"
+	fi
+}
+
+# Run main function with all arguments
+main "$@"

@@ -1,0 +1,280 @@
+#!/bin/bash
+
+# greet-user - Interactive user greeting script with input validation
+# This script demonstrates user interaction, input handling, and validation
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SHELL_STARTER_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+source "${SHELL_STARTER_ROOT}/lib/main.sh"
+
+show_help() {
+	cat <<EOF
+Usage: $(basename "$0") [OPTIONS] [NAME]
+
+Interactive script that greets users with customizable options and input validation.
+
+ARGUMENTS:
+    NAME              Pre-set name to greet (skips interactive prompt)
+
+OPTIONS:
+    -h, --help        Show this help message and exit
+    -v, --version     Show version information and exit
+    -i, --interactive Force interactive mode even if name is provided
+    -f, --formal      Use formal greeting style
+    -c, --casual      Use casual greeting style
+    --no-emoji        Disable emoji in output
+    --time-based      Include time-based greeting (morning/afternoon/evening)
+
+EXAMPLES:
+    $(basename "$0")                    # Interactive mode
+    $(basename "$0") Alice              # Direct greeting for Alice
+    $(basename "$0") --formal Bob       # Formal greeting for Bob
+    $(basename "$0") --interactive      # Force interactive mode
+    $(basename "$0") --time-based Alice # Include time-based greeting
+EOF
+}
+
+get_time_greeting() {
+	local hour
+	hour=$(date +%-H) # Use %-H to avoid leading zeros
+
+	if [[ $hour -lt 12 ]]; then
+		echo "Good morning"
+	elif [[ $hour -lt 17 ]]; then
+		echo "Good afternoon"
+	else
+		echo "Good evening"
+	fi
+}
+
+validate_name() {
+	local name="$1"
+
+	# Check if name is empty
+	if [[ -z "$name" ]]; then
+		return 1
+	fi
+
+	# Check if name contains only letters, spaces, hyphens, and apostrophes
+	if [[ ! "$name" =~ ^[a-zA-Z\ \'\-]+$ ]]; then
+		return 1
+	fi
+
+	# Check length (between 1 and 50 characters)
+	if [[ ${#name} -lt 1 || ${#name} -gt 50 ]]; then
+		return 1
+	fi
+
+	return 0
+}
+
+prompt_for_name() {
+	local name=""
+	local attempts=0
+	local max_attempts=3
+
+	while [[ $attempts -lt $max_attempts ]]; do
+		echo -n "Please enter your name: "
+		read -r name
+
+		if validate_name "$name"; then
+			echo "$name"
+			return 0
+		else
+			((attempts++))
+			if [[ $attempts -lt $max_attempts ]]; then
+				log::warn "Invalid name. Please use only letters, spaces, hyphens, and apostrophes (1-50 characters)."
+				echo "Attempts remaining: $((max_attempts - attempts))"
+			fi
+		fi
+	done
+
+	log::error "Maximum attempts reached. Exiting."
+	exit 1
+}
+
+format_greeting() {
+	local name="$1"
+	local style="${2:-normal}"
+	local use_emoji="${3:-true}"
+	local time_based="${4:-false}"
+	local greeting=""
+
+	# Get time-based greeting if requested
+	if [[ "$time_based" == "true" ]]; then
+		greeting=$(get_time_greeting)
+	fi
+
+	case "$style" in
+	formal)
+		if [[ "$time_based" == "true" ]]; then
+			if [[ "$use_emoji" == "true" ]]; then
+				echo "$greeting, it is a pleasure to meet you, $name! 🎩"
+			else
+				echo "$greeting, it is a pleasure to meet you, $name!"
+			fi
+		else
+			if [[ "$use_emoji" == "true" ]]; then
+				echo "It is a pleasure to meet you, $name! 🎩"
+			else
+				echo "It is a pleasure to meet you, $name!"
+			fi
+		fi
+		;;
+	casual)
+		if [[ "$time_based" == "true" ]]; then
+			if [[ "$use_emoji" == "true" ]]; then
+				echo "$greeting, hey there, $name! 👋"
+			else
+				echo "$greeting, hey there, $name!"
+			fi
+		else
+			if [[ "$use_emoji" == "true" ]]; then
+				echo "Hey there, $name! 👋"
+			else
+				echo "Hey there, $name!"
+			fi
+		fi
+		;;
+	*)
+		if [[ "$time_based" == "true" ]]; then
+			if [[ "$use_emoji" == "true" ]]; then
+				echo "$greeting, $name! 😊"
+			else
+				echo "$greeting, $name!"
+			fi
+		else
+			if [[ "$use_emoji" == "true" ]]; then
+				echo "Hello, $name! 😊"
+			else
+				echo "Hello, $name!"
+			fi
+		fi
+		;;
+	esac
+}
+
+show_user_info() {
+	local name="$1"
+	local style="$2"
+	local use_emoji="$3"
+	local time_based="$4"
+
+	echo -e "\n${COLOR_DIM}Greeting Details:${COLOR_RESET}"
+	echo -e "  ${COLOR_CYAN}Name:${COLOR_RESET} $name"
+	echo -e "  ${COLOR_CYAN}Style:${COLOR_RESET} $style"
+	echo -e "  ${COLOR_CYAN}Emoji:${COLOR_RESET} $([ "$use_emoji" == "true" ] && echo "enabled" || echo "disabled")"
+	echo -e "  ${COLOR_CYAN}Time-based:${COLOR_RESET} $([ "$time_based" == "true" ] && echo "enabled" || echo "disabled")"
+	echo -e "  ${COLOR_CYAN}Current time:${COLOR_RESET} $(date '+%Y-%m-%d %H:%M:%S')"
+}
+
+main() {
+	local name=""
+	local interactive=false
+	local style="normal"
+	local use_emoji=true
+	local time_based=false
+	local force_interactive=false
+
+	# Parse arguments
+	while [[ $# -gt 0 ]]; do
+		case $1 in
+		--interactive | -i)
+			force_interactive=true
+			shift
+			;;
+		--formal | -f)
+			style="formal"
+			shift
+			;;
+		--casual | -c)
+			style="casual"
+			shift
+			;;
+		--no-emoji)
+			use_emoji=false
+			shift
+			;;
+		--time-based)
+			time_based=true
+			shift
+			;;
+		--help | -h | --version | -v)
+			parse_common_args "$(basename "$0")" "$@"
+			;;
+		-*)
+			log::error "Unknown option: $1"
+			echo "Use --help for usage information."
+			exit 1
+			;;
+		*)
+			if [[ -z "$name" ]]; then
+				name="$1"
+			else
+				log::error "Multiple names provided. Please provide only one name."
+				exit 1
+			fi
+			shift
+			;;
+		esac
+	done
+
+	echo -e "${COLOR_BOLD}${COLOR_CYAN}User Greeting System${COLOR_RESET}"
+	echo "=============================="
+
+	# Determine if we need interactive mode
+	if [[ -z "$name" || "$force_interactive" == "true" ]]; then
+		interactive=true
+		log::info "Starting interactive mode"
+
+		if [[ -n "$name" && "$force_interactive" == "true" ]]; then
+			echo -e "${COLOR_WARNING}Note: Name '$name' provided but interactive mode forced.${COLOR_RESET}"
+		fi
+
+		echo ""
+		name=$(prompt_for_name)
+		log::info "Name collected: $name"
+	else
+		# Validate provided name
+		if ! validate_name "$name"; then
+			log::error "Invalid name provided: '$name'"
+			log::error "Names must contain only letters, spaces, hyphens, and apostrophes (1-50 characters)."
+			exit 1
+		fi
+		log::info "Using provided name: $name"
+	fi
+
+	echo ""
+
+	# Show greeting with spinner for effect
+	if [[ "$interactive" == "true" ]]; then
+		spinner::start "Preparing personalized greeting..."
+		sleep 1
+		spinner::stop
+	fi
+
+	# Display the greeting
+	local formatted_greeting
+	formatted_greeting=$(format_greeting "$name" "$style" "$use_emoji" "$time_based")
+
+	if [[ "$use_emoji" == "true" ]]; then
+		echo -e "${COLOR_SUCCESS}${COLOR_BOLD}$formatted_greeting${COLOR_RESET}"
+	else
+		echo -e "${COLOR_SUCCESS}${COLOR_BOLD}$formatted_greeting${COLOR_RESET}"
+	fi
+
+	# Show additional info if interactive
+	if [[ "$interactive" == "true" ]]; then
+		show_user_info "$name" "$style" "$use_emoji" "$time_based"
+	fi
+
+	echo ""
+	log::info "Greeting completed for user: $name"
+}
+
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+	main "$@"
+fi

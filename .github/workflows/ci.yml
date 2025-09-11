@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  shellcheck:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+        
+    - name: Install shellcheck
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y shellcheck
+        
+    - name: Run shellcheck
+      run: |
+        if ls lib/*.sh 1> /dev/null 2>&1; then shellcheck lib/*.sh; fi
+        if ls bin/* 1> /dev/null 2>&1; then shellcheck bin/*; fi
+        if [ -f install.sh ]; then shellcheck install.sh; fi
+        if [ -f uninstall.sh ]; then shellcheck uninstall.sh; fi
+
+  shfmt:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+        
+    - name: Install shfmt
+      run: |
+        sudo curl -L -o /usr/local/bin/shfmt https://github.com/mvdan/sh/releases/download/v3.12.0/shfmt_v3.12.0_linux_amd64
+        sudo chmod +x /usr/local/bin/shfmt
+        
+    - name: Run shfmt
+      run: |
+        if ls lib/*.sh 1> /dev/null 2>&1; then shfmt -d lib/*.sh; fi
+        if ls bin/* 1> /dev/null 2>&1; then shfmt -d bin/*; fi
+        if [ -f install.sh ]; then shfmt -d install.sh; fi
+        if [ -f uninstall.sh ]; then shfmt -d uninstall.sh; fi
+
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        # Don't fetch submodules initially - let the test script handle setup
+        submodules: false
+        
+    - name: Configure Git for submodules
+      run: |
+        git config --global user.email "ci@github.com"
+        git config --global user.name "GitHub CI"
+        
+    - name: Run Bats tests
+      run: |
+        if [ -d tests ] && ls tests/*.bats 1> /dev/null 2>&1; then
+          ./tests/run-tests-ci.sh
+        else
+          echo "No tests directory or test files found. Skipping tests."
+        fi

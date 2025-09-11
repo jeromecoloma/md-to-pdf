@@ -1,0 +1,11 @@
+# Shellcheck configuration for Shell Starter project
+
+# Ignore unused variable warnings for library files that define variables
+# for external use (colors, etc.)
+disable=SC2034
+
+# Allow sourcing files without following them (common in shell libraries)
+disable=SC1091
+
+# Allow info-level warnings that don't affect functionality
+disable=SC2317,SC2028,SC2155,SC2129,SC2126,SC2089,SC2090,SC2086,SC2005

@@ -1,0 +1,17 @@
+# Act configuration for local CI testing
+# This file configures act (GitHub Actions runner) for better local testing
+
+# Use a smaller Docker image for faster startup
+--container-architecture=linux/amd64
+
+# Note: BATS_TEST_TIMEOUT not set to avoid timeout issues in containers lacking pkill/ps
+
+# Set CI environment variables
+--env=CI=true
+--env=SHELL_STARTER_CI_MODE=true
+
+# Use GitHub's ubuntu-latest equivalent image with better tool support
+--platform=ubuntu-latest=catthehacker/ubuntu:act-latest
+
+# Alternative image with more tools (uncomment if needed)
+# --platform=ubuntu-latest=ghcr.io/catthehacker/ubuntu:full-latest

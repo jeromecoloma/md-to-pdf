@@ -1,0 +1,549 @@
+#!/bin/bash
+
+# my-cli - Multi-command CLI example demonstrating subcommand architecture
+# This script showcases how to build a CLI with multiple subcommands using Shell Starter
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SHELL_STARTER_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+source "${SHELL_STARTER_ROOT}/lib/main.sh"
+
+show_help() {
+	cat <<EOF
+Usage: $(basename "$0") [OPTIONS] <COMMAND> [ARGS...]
+
+Multi-command CLI demonstrating subcommand architecture patterns.
+
+COMMANDS:
+    status          Show system status information
+    config          Manage configuration settings
+    deploy          Deploy applications or services
+    backup          Create and manage backups
+    monitor         System monitoring utilities
+
+OPTIONS:
+    -h, --help      Show this help message and exit
+    -v, --version   Show version information and exit
+    --verbose       Enable verbose output
+    --quiet         Suppress non-essential output
+
+Use '$(basename "$0") <command> --help' for detailed command information.
+
+EXAMPLES:
+    $(basename "$0") status                    # Show system status
+    $(basename "$0") config list               # List all configuration
+    $(basename "$0") deploy --env prod app1    # Deploy app1 to production
+    $(basename "$0") backup create             # Create a new backup
+    $(basename "$0") monitor --watch           # Start monitoring with watch mode
+EOF
+}
+
+cmd_status() {
+	local detailed=false
+	local format="text"
+
+	while [[ $# -gt 0 ]]; do
+		case $1 in
+		--detailed | -d)
+			detailed=true
+			shift
+			;;
+		--format | -f)
+			format="$2"
+			shift 2
+			;;
+		--help | -h)
+			cat <<EOF
+Usage: $(basename "$0") status [OPTIONS]
+
+Show system status information.
+
+OPTIONS:
+    -d, --detailed    Show detailed status information
+    -f, --format      Output format (text|json|yaml) [default: text]
+    -h, --help        Show this help and exit
+
+EXAMPLES:
+    $(basename "$0") status                    # Basic status
+    $(basename "$0") status --detailed         # Detailed status
+    $(basename "$0") status --format json      # JSON output
+EOF
+			return 0
+			;;
+		*)
+			log::error "Unknown option for status command: $1"
+			echo "Use '$(basename "$0") status --help' for usage information."
+			return 1
+			;;
+		esac
+	done
+
+	log::info "Gathering system status information..."
+
+	echo -e "${COLOR_BOLD}${COLOR_CYAN}System Status${COLOR_RESET}"
+	echo "================================"
+
+	if [[ "$format" == "json" ]]; then
+		echo "{"
+		echo "  \"timestamp\": \"$(date -Iseconds)\","
+		echo "  \"hostname\": \"$(hostname)\","
+		echo "  \"uptime\": \"$(uptime | sed 's/.*up //' | sed 's/,.*//')\","
+		echo "  \"load_average\": \"$(uptime | awk -F'load average:' '{print $2}' | xargs)\""
+		if [[ "$detailed" == "true" ]]; then
+			echo "  \"disk_usage\": \"$(df -h / | tail -1 | awk '{print $5}')\","
+			echo "  \"memory_usage\": \"$(free -h | grep '^Mem:' | awk '{print $3}' || echo 'N/A')\""
+		fi
+		echo "}"
+	else
+		echo -e "  ${COLOR_GREEN}Hostname:${COLOR_RESET} $(hostname)"
+		echo -e "  ${COLOR_GREEN}Timestamp:${COLOR_RESET} $(date)"
+		echo -e "  ${COLOR_GREEN}Uptime:${COLOR_RESET} $(uptime | sed 's/.*up //' | sed 's/,.*//')"
+		echo -e "  ${COLOR_GREEN}Load Average:${COLOR_RESET} $(uptime | awk -F'load average:' '{print $2}' | xargs)"
+
+		if [[ "$detailed" == "true" ]]; then
+			echo -e "  ${COLOR_GREEN}Disk Usage (/)${COLOR_RESET}: $(df -h / | tail -1 | awk '{print $5}')"
+			if command -v free >/dev/null 2>&1; then
+				echo -e "  ${COLOR_GREEN}Memory Usage:${COLOR_RESET} $(free -h | grep '^Mem:' | awk '{print $3}')"
+			fi
+		fi
+	fi
+
+	log::info "Status check completed"
+}
+
+cmd_config() {
+	local subcommand="${1:-}"
+	shift || true
+
+	case "$subcommand" in
+	list)
+		echo -e "${COLOR_BOLD}Configuration Settings${COLOR_RESET}"
+		echo "=========================="
+		echo -e "  ${COLOR_CYAN}app.name${COLOR_RESET}: my-application"
+		echo -e "  ${COLOR_CYAN}app.version${COLOR_RESET}: $(get_version)"
+		echo -e "  ${COLOR_CYAN}app.environment${COLOR_RESET}: development"
+		echo -e "  ${COLOR_CYAN}logging.level${COLOR_RESET}: info"
+		log::info "Configuration listed successfully"
+		;;
+	set)
+		local key="${1:-}"
+		local value="${2:-}"
+		if [[ -z "$key" || -z "$value" ]]; then
+			log::error "Usage: $(basename "$0") config set <key> <value>"
+			return 1
+		fi
+		log::info "Setting configuration: $key = $value"
+		echo -e "${COLOR_SUCCESS}Configuration updated: ${COLOR_BOLD}$key${COLOR_RESET}${COLOR_SUCCESS} = ${COLOR_BOLD}$value${COLOR_RESET}"
+		;;
+	get)
+		local key="${1:-}"
+		if [[ -z "$key" ]]; then
+			log::error "Usage: $(basename "$0") config get <key>"
+			return 1
+		fi
+		echo -e "Value for ${COLOR_BOLD}$key${COLOR_RESET}: development"
+		;;
+	--help | -h | "")
+		cat <<EOF
+Usage: $(basename "$0") config <SUBCOMMAND> [OPTIONS]
+
+Manage configuration settings.
+
+SUBCOMMANDS:
+    list            List all configuration settings
+    get <key>       Get value for specific configuration key
+    set <key> <val> Set configuration key to value
+
+OPTIONS:
+    -h, --help      Show this help and exit
+
+EXAMPLES:
+    $(basename "$0") config list               # List all settings
+    $(basename "$0") config get app.name       # Get specific setting
+    $(basename "$0") config set app.env prod   # Set configuration
+EOF
+		;;
+	*)
+		log::error "Unknown config subcommand: $subcommand"
+		echo "Use '$(basename "$0") config --help' for usage information."
+		return 1
+		;;
+	esac
+}
+
+cmd_deploy() {
+	local app_name=""
+	local environment="staging"
+	local dry_run=false
+	local force=false
+
+	while [[ $# -gt 0 ]]; do
+		case $1 in
+		--env | -e)
+			environment="$2"
+			shift 2
+			;;
+		--dry-run | -n)
+			dry_run=true
+			shift
+			;;
+		--force)
+			force=true
+			shift
+			;;
+		--help | -h)
+			cat <<EOF
+Usage: $(basename "$0") deploy [OPTIONS] <APP_NAME>
+
+Deploy applications or services.
+
+ARGUMENTS:
+    APP_NAME        Name of the application to deploy
+
+OPTIONS:
+    -e, --env       Target environment (staging|prod) [default: staging]
+    -n, --dry-run   Show what would be deployed without actually deploying
+        --force     Force deployment even if checks fail
+    -h, --help      Show this help and exit
+
+EXAMPLES:
+    $(basename "$0") deploy myapp              # Deploy to staging
+    $(basename "$0") deploy --env prod myapp   # Deploy to production
+    $(basename "$0") deploy --dry-run myapp    # Dry run deployment
+EOF
+			return 0
+			;;
+		-*)
+			log::error "Unknown option: $1"
+			return 1
+			;;
+		*)
+			app_name="$1"
+			shift
+			;;
+		esac
+	done
+
+	if [[ -z "$app_name" ]]; then
+		log::error "Application name is required"
+		echo "Use '$(basename "$0") deploy --help' for usage information."
+		return 1
+	fi
+
+	log::info "Preparing deployment of '$app_name' to '$environment'"
+
+	if [[ "$dry_run" == "true" ]]; then
+		echo -e "${COLOR_WARNING}DRY RUN MODE - No actual deployment will occur${COLOR_RESET}"
+	fi
+
+	spinner::start "Running pre-deployment checks..."
+	sleep 1
+	spinner::stop
+
+	echo -e "${COLOR_SUCCESS}✓${COLOR_RESET} Pre-deployment checks passed"
+
+	if [[ "$environment" == "prod" && "$force" == "false" ]]; then
+		echo -n "Are you sure you want to deploy to production? [y/N]: "
+		read -r confirm
+		if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+			log::warn "Deployment cancelled by user"
+			return 0
+		fi
+	fi
+
+	spinner::start "Deploying $app_name to $environment..."
+	sleep 2
+	spinner::stop
+
+	if [[ "$dry_run" == "true" ]]; then
+		echo -e "${COLOR_INFO}[DRY RUN] Would deploy $app_name to $environment${COLOR_RESET}"
+	else
+		echo -e "${COLOR_SUCCESS}✓ Successfully deployed $app_name to $environment${COLOR_RESET}"
+		log::info "Deployment completed: $app_name -> $environment"
+	fi
+}
+
+cmd_backup() {
+	local subcommand="${1:-create}"
+	shift || true
+
+	case "$subcommand" in
+	create)
+		local backup_name="backup-$(date +%Y%m%d-%H%M%S)"
+		local include_data=true
+
+		while [[ $# -gt 0 ]]; do
+			case $1 in
+			--name | -n)
+				backup_name="$2"
+				shift 2
+				;;
+			--no-data)
+				include_data=false
+				shift
+				;;
+			--help | -h)
+				cat <<EOF
+Usage: $(basename "$0") backup create [OPTIONS]
+
+Create a new backup.
+
+OPTIONS:
+    -n, --name      Custom backup name [default: backup-TIMESTAMP]
+        --no-data   Skip data backup (config only)
+    -h, --help      Show this help and exit
+EOF
+				return 0
+				;;
+			*)
+				log::error "Unknown option: $1"
+				return 1
+				;;
+			esac
+		done
+
+		log::info "Creating backup: $backup_name"
+		spinner::start "Creating backup..."
+		sleep 2
+		spinner::stop
+
+		echo -e "${COLOR_SUCCESS}✓ Backup created successfully: ${COLOR_BOLD}$backup_name${COLOR_RESET}"
+		if [[ "$include_data" == "true" ]]; then
+			echo -e "  ${COLOR_DIM}• Configuration and data included${COLOR_RESET}"
+		else
+			echo -e "  ${COLOR_DIM}• Configuration only (data excluded)${COLOR_RESET}"
+		fi
+		;;
+	list)
+		echo -e "${COLOR_BOLD}Available Backups${COLOR_RESET}"
+		echo "====================="
+		echo -e "  ${COLOR_CYAN}backup-20241201-143022${COLOR_RESET} (2.1 MB) - 2 days ago"
+		echo -e "  ${COLOR_CYAN}backup-20241128-091545${COLOR_RESET} (1.8 MB) - 1 week ago"
+		echo -e "  ${COLOR_CYAN}backup-20241121-180330${COLOR_RESET} (1.9 MB) - 2 weeks ago"
+		log::info "Listed $(echo -e "3") available backups"
+		;;
+	restore)
+		local backup_name="${1:-}"
+		if [[ -z "$backup_name" ]]; then
+			log::error "Backup name is required for restore"
+			echo "Use '$(basename "$0") backup list' to see available backups"
+			return 1
+		fi
+
+		echo -n "Are you sure you want to restore from '$backup_name'? [y/N]: "
+		read -r confirm
+		if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+			log::warn "Restore cancelled by user"
+			return 0
+		fi
+
+		log::info "Restoring from backup: $backup_name"
+		spinner::start "Restoring backup..."
+		sleep 2
+		spinner::stop
+
+		echo -e "${COLOR_SUCCESS}✓ Successfully restored from backup: ${COLOR_BOLD}$backup_name${COLOR_RESET}"
+		;;
+	--help | -h)
+		cat <<EOF
+Usage: $(basename "$0") backup <SUBCOMMAND> [OPTIONS]
+
+Create and manage backups.
+
+SUBCOMMANDS:
+    create          Create a new backup (default)
+    list            List available backups
+    restore <name>  Restore from a specific backup
+
+OPTIONS:
+    -h, --help      Show this help and exit
+
+EXAMPLES:
+    $(basename "$0") backup create             # Create backup with timestamp
+    $(basename "$0") backup create --name prod-backup # Create named backup
+    $(basename "$0") backup list               # List all backups
+    $(basename "$0") backup restore backup-20241201-143022 # Restore backup
+EOF
+		;;
+	*)
+		log::error "Unknown backup subcommand: $subcommand"
+		echo "Use '$(basename "$0") backup --help' for usage information."
+		return 1
+		;;
+	esac
+}
+
+cmd_monitor() {
+	local watch_mode=false
+	local interval=5
+	local metric="all"
+
+	while [[ $# -gt 0 ]]; do
+		case $1 in
+		--watch | -w)
+			watch_mode=true
+			shift
+			;;
+		--interval | -i)
+			interval="$2"
+			shift 2
+			;;
+		--metric | -m)
+			metric="$2"
+			shift 2
+			;;
+		--help | -h)
+			cat <<EOF
+Usage: $(basename "$0") monitor [OPTIONS]
+
+System monitoring utilities.
+
+OPTIONS:
+    -w, --watch       Enable watch mode (continuous monitoring)
+    -i, --interval    Watch interval in seconds [default: 5]
+    -m, --metric      Specific metric to monitor (cpu|memory|disk|all) [default: all]
+    -h, --help        Show this help and exit
+
+EXAMPLES:
+    $(basename "$0") monitor                   # One-time monitoring
+    $(basename "$0") monitor --watch           # Continuous monitoring
+    $(basename "$0") monitor --watch --interval 10 # Watch every 10 seconds
+    $(basename "$0") monitor --metric cpu      # Monitor CPU only
+EOF
+			return 0
+			;;
+		*)
+			log::error "Unknown option: $1"
+			return 1
+			;;
+		esac
+	done
+
+	log::info "Starting monitoring (metric: $metric)"
+
+	if [[ "$watch_mode" == "true" ]]; then
+		echo -e "${COLOR_WARNING}Watch mode enabled - Press Ctrl+C to stop${COLOR_RESET}"
+		echo -e "${COLOR_DIM}Monitoring every ${interval} seconds...${COLOR_RESET}"
+		echo ""
+
+		local count=1
+		while true; do
+			echo -e "${COLOR_BOLD}Monitor Update #$count - $(date)${COLOR_RESET}"
+			echo "=========================================="
+
+			case "$metric" in
+			cpu | all)
+				echo -e "  ${COLOR_CYAN}CPU Load:${COLOR_RESET} $(uptime | awk -F'load average:' '{print $2}' | xargs)"
+				;;
+			esac
+
+			case "$metric" in
+			memory | all)
+				if command -v free >/dev/null 2>&1; then
+					echo -e "  ${COLOR_CYAN}Memory:${COLOR_RESET} $(free -h | grep '^Mem:' | awk '{print $3 "/" $2}')"
+				fi
+				;;
+			esac
+
+			case "$metric" in
+			disk | all)
+				echo -e "  ${COLOR_CYAN}Disk (/):${COLOR_RESET} $(df -h / | tail -1 | awk '{print $5 " used"}')"
+				;;
+			esac
+
+			echo ""
+			((count++))
+			sleep "$interval"
+		done
+	else
+		echo -e "${COLOR_BOLD}System Monitoring Snapshot${COLOR_RESET}"
+		echo "=================================="
+		echo -e "  ${COLOR_CYAN}Timestamp:${COLOR_RESET} $(date)"
+		echo -e "  ${COLOR_CYAN}CPU Load:${COLOR_RESET} $(uptime | awk -F'load average:' '{print $2}' | xargs)"
+		if command -v free >/dev/null 2>&1; then
+			echo -e "  ${COLOR_CYAN}Memory:${COLOR_RESET} $(free -h | grep '^Mem:' | awk '{print $3 "/" $2}')"
+		fi
+		echo -e "  ${COLOR_CYAN}Disk (/):${COLOR_RESET} $(df -h / | tail -1 | awk '{print $5 " used"}')"
+
+		log::info "Monitoring snapshot completed"
+	fi
+}
+
+main() {
+	local verbose=false
+	local quiet=false
+	local command=""
+
+	# Parse global options first
+	while [[ $# -gt 0 ]]; do
+		case $1 in
+		--verbose)
+			verbose=true
+			shift
+			;;
+		--quiet)
+			quiet=true
+			shift
+			;;
+		--help | -h | --version | -v)
+			parse_common_args "$(basename "$0")" "$@"
+			;;
+		-*)
+			log::error "Unknown global option: $1"
+			echo "Use --help for usage information."
+			exit 1
+			;;
+		*)
+			command="$1"
+			shift
+			break
+			;;
+		esac
+	done
+
+	# Set verbosity
+	if [[ "$verbose" == "true" ]]; then
+		log::debug "Verbose mode enabled"
+	fi
+	if [[ "$quiet" == "true" ]]; then
+		log::debug "Quiet mode enabled"
+	fi
+
+	# Require a command
+	if [[ -z "$command" ]]; then
+		log::error "No command specified"
+		echo ""
+		show_help
+		exit 1
+	fi
+
+	# Route to appropriate command function
+	case "$command" in
+	status)
+		cmd_status "$@"
+		;;
+	config)
+		cmd_config "$@"
+		;;
+	deploy)
+		cmd_deploy "$@"
+		;;
+	backup)
+		cmd_backup "$@"
+		;;
+	monitor)
+		cmd_monitor "$@"
+		;;
+	*)
+		log::error "Unknown command: $command"
+		echo "Use --help to see available commands."
+		exit 1
+		;;
+	esac
+}
+
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+	main "$@"
+fi
