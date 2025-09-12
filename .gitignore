@@ -21,6 +21,9 @@ install_manifest.txt
 # dist/
 build/
 
+# Test outputs and generated PDFs
+tests/outputs/
+
 # --- Local Development & AI Configs --- #
 # These are symlinked from a separate, private repository
 # and should not be part of the main project history.

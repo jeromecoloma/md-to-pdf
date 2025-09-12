@@ -24,6 +24,10 @@ readonly EXIT_INTERRUPTED=7
 TEMP_FILES=()
 OUTPUT_FILE=""
 
+# Available themes
+readonly AVAILABLE_THEMES=("github" "academic" "clean" "modern")
+readonly THEMES_DIR="${SHELL_STARTER_ROOT}/lib/themes"
+
 # Cleanup function for interrupted operations
 cleanup() {
 	local exit_code=$?
@@ -67,9 +71,13 @@ trap cleanup INT TERM
 
 show_help() {
 	cat <<EOF
-Usage: $(basename "$0") [OPTIONS] INPUT_FILE [OUTPUT_FILE]
+Usage: $(basename "$0") [OPTIONS] [INPUT_FILE [OUTPUT_FILE]]
 
-Convert markdown files to PDF using pandoc.
+Convert markdown files to PDF using pandoc with theme support.
+
+MODES:
+    Interactive Mode:  $(basename "$0")                    # Prompts for all inputs
+    Direct Mode:       $(basename "$0") INPUT_FILE         # Convert with defaults
 
 ARGUMENTS:
     INPUT_FILE         Path to the markdown file to convert
@@ -80,12 +88,27 @@ OPTIONS:
     -v, --version      Show version information and exit
     -q, --quiet        Suppress verbose output
     -f, --force        Overwrite existing output files without prompting
+    -t, --theme THEME  Use specified theme (default: github)
+    -l, --list-themes  List available themes and exit
+    -p, --preview      Show conversion preview without creating PDF
+    -c, --css FILE     Use custom CSS file for styling
+
+THEMES:
+    github             GitHub-style formatting (default)
+    academic           Academic paper formatting
+    clean              Clean, minimal formatting
+    modern             Modern, professional formatting
 
 EXAMPLES:
-    $(basename "$0") document.md                    # Convert to document.pdf
-    $(basename "$0") document.md report.pdf         # Convert to report.pdf
-    $(basename "$0") --force document.md            # Overwrite existing document.pdf
-    $(basename "$0") --help                         # Show this help
+    $(basename "$0")                           # Interactive mode
+    $(basename "$0") document.md               # Convert to document.pdf
+    $(basename "$0") document.md report.pdf    # Convert to report.pdf
+    $(basename "$0") --theme academic doc.md   # Use academic theme
+    $(basename "$0") --css custom.css doc.md   # Use custom CSS
+    $(basename "$0") --preview document.md     # Preview conversion
+    $(basename "$0") --list-themes             # Show available themes
+    $(basename "$0") --force document.md       # Overwrite existing document.pdf
+    $(basename "$0") --help                    # Show this help
 EOF
 }
 
@@ -264,21 +287,152 @@ validate_markdown_format() {
 	return 0
 }
 
+validate_theme() {
+	local theme="$1"
+
+	# Check if theme is in available themes
+	for available_theme in "${AVAILABLE_THEMES[@]}"; do
+		if [[ "$theme" == "$available_theme" ]]; then
+			return 0
+		fi
+	done
+
+	log::error "Invalid theme: $theme"
+	log::info "Available themes:"
+	for available_theme in "${AVAILABLE_THEMES[@]}"; do
+		log::info "  - $available_theme"
+	done
+	return 1
+}
+
+list_themes() {
+	log::info "Available themes:"
+	for theme in "${AVAILABLE_THEMES[@]}"; do
+		log::info "  - $theme"
+	done
+}
+
+validate_css_file() {
+	local css_file="$1"
+
+	if [[ -z "$css_file" ]]; then
+		return 0
+	fi
+
+	if [[ ! -f "$css_file" ]]; then
+		log::error "CSS file not found: $css_file"
+		return 1
+	fi
+
+	if [[ ! -r "$css_file" ]]; then
+		log::error "CSS file is not readable: $css_file"
+		return 1
+	fi
+
+	# Basic CSS validation - check if it contains CSS-like content
+	if ! grep -q "{" "$css_file" 2>/dev/null; then
+		log::warn "CSS file does not appear to contain valid CSS rules: $css_file"
+		log::warn "Proceeding anyway..."
+	fi
+
+	return 0
+}
+
+show_preview() {
+	local input_file="$1"
+	local output_file="$2"
+	local theme="$3"
+	local css_file="$4"
+
+	log::info "=== CONVERSION PREVIEW ==="
+	log::info "Input file: $input_file"
+
+	# Get file information
+	if [[ -f "$input_file" ]]; then
+		local file_size
+		file_size=$(stat -f%z "$input_file" 2>/dev/null || stat -c%s "$input_file" 2>/dev/null || echo "unknown")
+		local line_count
+		line_count=$(wc -l <"$input_file" 2>/dev/null || echo "unknown")
+		log::info "File size: ${file_size} bytes"
+		log::info "Line count: ${line_count} lines"
+	else
+		log::info "File status: Not found (will be created if conversion proceeds)"
+	fi
+
+	log::info "Output file: $output_file"
+	log::info "Selected theme: $theme"
+
+	# Show theme template information
+	local theme_tex="${THEMES_DIR}/${theme}.tex"
+	if [[ -f "$theme_tex" ]]; then
+		log::info "Theme template: $theme_tex (found)"
+	else
+		log::info "Theme template: $theme_tex (not found - will use default)"
+	fi
+
+	# Show CSS information if specified
+	if [[ -n "$css_file" ]]; then
+		if [[ -f "$css_file" ]]; then
+			log::info "Custom CSS: $css_file (found)"
+		else
+			log::info "Custom CSS: $css_file (not found)"
+		fi
+	fi
+
+	# Show pandoc command that would be executed
+	local pandoc_cmd="pandoc \"$input_file\" -o \"$output_file\" --pdf-engine=xelatex"
+	if [[ -f "$theme_tex" ]]; then
+		pandoc_cmd="$pandoc_cmd --template \"$theme_tex\" --no-highlight"
+	fi
+	if [[ -n "$css_file" ]]; then
+		pandoc_cmd="$pandoc_cmd --css \"$css_file\""
+	fi
+
+	log::info "Pandoc command: $pandoc_cmd"
+	log::info ""
+	log::info "To proceed with conversion, remove the --preview flag"
+	log::info "To change theme, use --theme <theme_name>"
+	log::info "To change output file, specify it as second argument"
+}
+
 convert_markdown_to_pdf() {
 	local input_file="$1"
 	local output_file="$2"
 	local quiet="$3"
+	local theme="$4"
+	local css_file="$5"
 
 	if [[ "$quiet" == "false" ]]; then
 		log::info "Starting markdown to PDF conversion..."
-		spinner::start "Converting $input_file to PDF"
+		log::info "Using theme: $theme"
+		spinner::start "Converting $input_file to PDF with $theme theme"
 	fi
 
 	# Track temporary files for cleanup
 	TEMP_FILES+=("/tmp/pandoc_error.log")
 
-	# Call pandoc with appropriate arguments
-	if pandoc "$input_file" -o "$output_file" --pdf-engine=xelatex 2>/tmp/pandoc_error.log; then
+	# Build pandoc command with theme support
+	local pandoc_cmd="pandoc \"$input_file\" -o \"$output_file\" --pdf-engine=xelatex"
+
+	# Add theme template if theme file exists
+	local theme_tex="${THEMES_DIR}/${theme}.tex"
+
+	if [[ -f "$theme_tex" ]]; then
+		pandoc_cmd="$pandoc_cmd --template \"$theme_tex\" --no-highlight"
+	else
+		log::warn "Theme template not found: $theme_tex - using default pandoc template"
+	fi
+
+	# Add custom CSS if specified (primarily for HTML output, but included for completeness)
+	if [[ -n "$css_file" ]]; then
+		pandoc_cmd="$pandoc_cmd --css \"$css_file\""
+		if [[ "$quiet" == "false" ]]; then
+			log::info "Using custom CSS: $css_file"
+		fi
+	fi
+
+	# Execute pandoc command
+	if eval "$pandoc_cmd" 2>/tmp/pandoc_error.log; then
 		if [[ "$quiet" == "false" ]]; then
 			spinner::stop
 			log::success "Conversion completed successfully"
@@ -337,9 +491,206 @@ validate_conversion_result() {
 	return 0
 }
 
+prompt_theme_selection() {
+	local current_theme="$1"
+
+	log::info "Available themes:"
+	local i=1
+	for theme in "${AVAILABLE_THEMES[@]}"; do
+		if [[ "$theme" == "$current_theme" ]]; then
+			log::info "  $i. $theme (current default)"
+		else
+			log::info "  $i. $theme"
+		fi
+		((i++))
+	done
+
+	log::info ""
+	read -p "Select theme (1-${#AVAILABLE_THEMES[@]}, or press Enter for default '$current_theme'): " -r theme_choice
+	echo
+
+	if [[ -z "$theme_choice" ]]; then
+		echo "$current_theme"
+		return 0
+	fi
+
+	# Validate numeric input
+	if ! [[ "$theme_choice" =~ ^[0-9]+$ ]]; then
+		log::error "Invalid input: please enter a number between 1 and ${#AVAILABLE_THEMES[@]}"
+		return 1
+	fi
+
+	# Check range
+	if [[ $theme_choice -lt 1 || $theme_choice -gt ${#AVAILABLE_THEMES[@]} ]]; then
+		log::error "Invalid choice: please select a number between 1 and ${#AVAILABLE_THEMES[@]}"
+		return 1
+	fi
+
+	# Get theme name (arrays are 0-indexed)
+	local selected_theme="${AVAILABLE_THEMES[$((theme_choice - 1))]}"
+	log::info "Selected theme: $selected_theme"
+	echo "$selected_theme"
+}
+
+interactive_mode() {
+	local input_file=""
+	local output_file=""
+	local theme="github"
+	local css_file=""
+	local force=false
+
+	log::info "=== INTERACTIVE MODE ==="
+	log::info "Welcome to md-to-pdf! Let's convert your markdown file to PDF."
+	log::info ""
+
+	# Prompt for input file
+	while [[ -z "$input_file" ]]; do
+		read -p "Enter path to markdown file: " -r input_file
+		echo
+
+		if [[ -z "$input_file" ]]; then
+			log::warn "Input file is required. Please try again."
+			continue
+		fi
+
+		# Validate input file
+		if [[ ! -r "$input_file" ]]; then
+			if [[ ! -e "$input_file" ]]; then
+				log::error "File does not exist: $input_file"
+			else
+				log::error "File is not readable: $input_file"
+			fi
+			input_file=""
+			continue
+		fi
+
+		# Check file extension
+		if [[ ! "$input_file" =~ \.(md|markdown)$ ]]; then
+			log::warn "File does not have .md or .markdown extension: $input_file"
+			read -p "Continue anyway? (y/N): " -n 1 -r
+			echo
+			if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+				input_file=""
+				continue
+			fi
+		fi
+	done
+
+	# Set default output file
+	local default_output="${input_file%.*}.pdf"
+	read -p "Enter output PDF file path (default: $default_output): " -r output_file
+	echo
+
+	if [[ -z "$output_file" ]]; then
+		output_file="$default_output"
+	fi
+
+	# Check if output file exists
+	if [[ -f "$output_file" ]]; then
+		log::warn "Output file already exists: $output_file"
+		read -p "Overwrite it? (y/N): " -n 1 -r
+		echo
+		if [[ $REPLY =~ ^[Yy]$ ]]; then
+			force=true
+		else
+			log::info "Operation cancelled"
+			return 1
+		fi
+	fi
+
+	# Prompt for theme selection
+	local selected_theme
+	selected_theme=$(prompt_theme_selection "$theme")
+	local prompt_result=$?
+
+	if [[ $prompt_result -ne 0 ]]; then
+		log::error "Theme selection failed"
+		return 1
+	fi
+
+	theme="$selected_theme"
+
+	# Optional: prompt for custom CSS
+	read -p "Enter custom CSS file path (optional, press Enter to skip): " -r css_file
+	echo
+
+	if [[ -n "$css_file" ]]; then
+		if ! validate_css_file "$css_file"; then
+			log::warn "CSS file validation failed, proceeding without custom CSS"
+			css_file=""
+		fi
+	fi
+
+	# Show summary and confirm
+	log::info "=== CONVERSION SUMMARY ==="
+	log::info "Input file: $input_file"
+	log::info "Output file: $output_file"
+	log::info "Theme: $theme"
+	if [[ -n "$css_file" ]]; then
+		log::info "Custom CSS: $css_file"
+	fi
+	log::info ""
+
+	read -p "Proceed with conversion? (Y/n): " -n 1 -r
+	echo
+
+	if [[ $REPLY =~ ^[Nn]$ ]]; then
+		log::info "Operation cancelled by user"
+		return 1
+	fi
+
+	# Perform validation checks
+	log::info "Validating input..."
+
+	# Validate file permissions
+	validate_file_permissions "$input_file" "$output_file"
+	local validation_result=$?
+	if [[ $validation_result -ne 0 ]]; then
+		return $validation_result
+	fi
+
+	# Validate markdown format
+	validate_markdown_format "$input_file"
+	local format_result=$?
+	if [[ $format_result -ne 0 ]]; then
+		return $format_result
+	fi
+
+	# Check disk space
+	check_disk_space "$input_file" "$output_file"
+	local disk_result=$?
+	if [[ $disk_result -ne 0 ]]; then
+		return $disk_result
+	fi
+
+	# Perform the conversion
+	log::info "Starting conversion..."
+	local conversion_result
+	conversion_result=$(convert_markdown_to_pdf "$input_file" "$output_file" "false" "$theme" "$css_file")
+	local conversion_exit=$?
+
+	if [[ $conversion_exit -ne $EXIT_SUCCESS ]]; then
+		return $conversion_exit
+	fi
+
+	# Validate the result
+	if ! validate_conversion_result "$output_file"; then
+		log::error "Output validation failed"
+		return $EXIT_CONVERSION_FAILED
+	fi
+
+	log::success "Interactive conversion completed successfully!"
+	log::info "Output saved to: $output_file"
+
+	return $EXIT_SUCCESS
+}
+
 main() {
 	local quiet=false
 	local force=false
+	local theme="github"
+	local preview=false
+	local css_file=""
 	local input_file=""
 	local output_file=""
 
@@ -357,6 +708,32 @@ main() {
 		--force | -f)
 			force=true
 			shift
+			;;
+		--theme | -t)
+			if [[ -z "$2" || "$2" =~ ^- ]]; then
+				log::error "Theme name is required after --theme/-t"
+				echo "Use --help for usage information."
+				exit 1
+			fi
+			theme="$2"
+			shift 2
+			;;
+		--list-themes | -l)
+			list_themes
+			exit $EXIT_SUCCESS
+			;;
+		--preview | -p)
+			preview=true
+			shift
+			;;
+		--css | -c)
+			if [[ -z "$2" || "$2" =~ ^- ]]; then
+				log::error "CSS file path is required after --css/-c"
+				echo "Use --help for usage information."
+				exit 1
+			fi
+			css_file="$2"
+			shift 2
 			;;
 		--help | -h | --version | -v)
 			parse_common_args "$(basename "$0")" "$@"
@@ -381,10 +758,37 @@ main() {
 		esac
 	done
 
+	# Validate theme
+	if ! validate_theme "$theme"; then
+		exit 1
+	fi
+
+	# Validate CSS file if specified
+	if ! validate_css_file "$css_file"; then
+		exit 1
+	fi
+
+	# Check if we should enter interactive mode
+	if [[ -z "$input_file" && $# -eq 0 ]]; then
+		# No arguments provided, enter interactive mode
+		interactive_mode
+		exit $?
+	fi
+
 	if [[ -z "$input_file" ]]; then
 		log::error "Input file is required"
 		echo "Use --help for usage information."
 		exit 1
+	fi
+
+	# Handle preview mode
+	if [[ "$preview" == "true" ]]; then
+		# Set default output file for preview
+		if [[ -z "$output_file" ]]; then
+			output_file="${input_file%.*}.pdf"
+		fi
+		show_preview "$input_file" "$output_file" "$theme" "$css_file"
+		exit $EXIT_SUCCESS
 	fi
 
 	# Set default output file if not specified
@@ -429,7 +833,7 @@ main() {
 
 	# Perform the conversion
 	local conversion_result
-	conversion_result=$(convert_markdown_to_pdf "$input_file" "$output_file" "$quiet")
+	conversion_result=$(convert_markdown_to_pdf "$input_file" "$output_file" "$quiet" "$theme" "$css_file")
 	local conversion_exit=$?
 
 	if [[ $conversion_exit -ne $EXIT_SUCCESS ]]; then

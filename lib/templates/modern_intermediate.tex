@@ -1,0 +1,83 @@
+\documentclass[14pt,a4paper]{article}
+
+% Modern Theme - Contemporary, stylish design
+\usepackage[margin=40mm]{geometry}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{setspace}
+
+% Font setup - Modern system fonts
+\usepackage{fontspec}
+\setmainfont{-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif}
+
+% Line spacing
+\onehalfspacing
+
+% Modern color palette
+\definecolor{modern-blue}{HTML}{3498db}
+\definecolor{modern-green}{HTML}{2ecc71}
+\definecolor{modern-red}{HTML}{e74c3c}
+
+% Code formatting
+\lstset{
+    basicstyle=\ttfamily\footnotesize,
+    backgroundcolor=\color{blue!5},
+    frame=none,
+    breaklines=true
+}
+
+% Link colors
+\hypersetup{
+    colorlinks=true,
+    linkcolor=modern-blue,
+    urlcolor=modern-blue
+}
+
+% Pandoc compatibility
+\providecommand{\tightlist}{\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\usepackage{framed}
+\usepackage{fancyvrb}
+\definecolor{shadecolor}{gray}{0.95}
+\newenvironment{Shaded}{\begin{shaded}}{\end{shaded}}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+
+% Title formatting
+
+\begin{document}
+
+
+\section{Test Document}\label{test-document}
+
+This is a test of the \textbf{theme system}.
+
+\subsection{Features}\label{features}
+
+\begin{itemize}
+\tightlist
+\item
+  Theme support
+\item
+  Multiple styles
+\item
+  Professional output
+\end{itemize}
+
+\begin{verbatim}
+echo 'Hello World'
+\end{verbatim}
+
+\begin{quote}
+This is a blockquote
+\end{quote}
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  First item
+\item
+  Second item
+\end{enumerate}
+
+\end{document}

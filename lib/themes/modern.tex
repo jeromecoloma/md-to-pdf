@@ -1,0 +1,63 @@
+\documentclass[12pt,a4paper]{article}
+
+% Modern Theme - Contemporary, stylish design
+\usepackage[margin=30mm]{geometry}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{setspace}
+
+% Font setup - Clean, modern fonts
+\usepackage{lmodern}
+
+% Line spacing
+\onehalfspacing
+
+% Modern color palette
+\definecolor{modern-blue}{HTML}{3498db}
+\definecolor{modern-green}{HTML}{2ecc71}
+\definecolor{modern-red}{HTML}{e74c3c}
+
+% Code formatting
+\lstset{
+    basicstyle=\ttfamily\footnotesize,
+    backgroundcolor=\color{blue!5},
+    frame=none,
+    breaklines=true
+}
+
+% Link colors
+\hypersetup{
+    colorlinks=true,
+    linkcolor=modern-blue,
+    urlcolor=modern-blue
+}
+
+% Pandoc compatibility
+\providecommand{\tightlist}{\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\usepackage{framed}
+\usepackage{fancyvrb}
+\definecolor{shadecolor}{gray}{0.95}
+\newenvironment{Shaded}{\begin{shaded}}{\end{shaded}}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+
+% Title formatting
+$if(title)$
+\title{\Huge\textbf{$title$}}
+$endif$
+$if(author)$
+\author{$author$}
+$endif$
+$if(date)$
+\date{$date$}
+$endif$
+
+\begin{document}
+
+$if(title)$
+\maketitle
+$endif$
+
+$body$
+
+\end{document}

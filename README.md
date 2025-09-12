@@ -73,10 +73,45 @@ md-to-pdf --preview document.md
 
 | Option | Description | Example |
 |--------|-------------|---------|
-| `--help`, `-h` | Show help message | `md-to-pdf --help` |
-| `--version`, `-v` | Show version | `md-to-pdf --version` |
-| `--theme <name>` | Use specific theme (github, academic, clean, modern) | `md-to-pdf --theme academic doc.md` |
-| `--preview` | Show conversion plan without executing | `md-to-pdf --preview doc.md` |
+| `--help`, `-h` | Show help message and usage examples | `md-to-pdf --help` |
+| `--version`, `-v` | Show version information | `md-to-pdf --version` |
+| `--theme <name>`, `-t <name>` | Use specific theme (github, academic, clean, modern) | `md-to-pdf --theme academic doc.md` |
+| `--list-themes`, `-l` | List all available themes | `md-to-pdf --list-themes` |
+| `--preview`, `-p` | Show conversion plan without creating PDF | `md-to-pdf --preview doc.md` |
+| `--css <file>`, `-c <file>` | Use custom CSS file for styling | `md-to-pdf --css custom.css doc.md` |
+| `--quiet`, `-q` | Suppress verbose output | `md-to-pdf --quiet doc.md` |
+| `--force`, `-f` | Overwrite existing files without prompting | `md-to-pdf --force doc.md` |
+
+### Available Themes
+
+md-to-pdf includes four professionally designed themes:
+
+- **GitHub** (default): Clean, familiar styling matching GitHub's markdown rendering
+- **Academic**: Formal academic paper formatting with Times New Roman and structured layout
+- **Clean**: Minimal, readable design with Helvetica Neue typography
+- **Modern**: Contemporary styling with gradients, shadows, and modern typography
+
+### Advanced Usage Examples
+
+```bash
+# List all available themes
+md-to-pdf --list-themes
+
+# Convert with academic theme and custom output
+md-to-pdf --theme academic document.md thesis.pdf
+
+# Preview conversion with modern theme
+md-to-pdf --preview --theme modern document.md
+
+# Use custom CSS with quiet mode
+md-to-pdf --css styles.css --quiet document.md
+
+# Force overwrite existing file
+md-to-pdf --force --theme clean document.md
+
+# Combine multiple options
+md-to-pdf --theme academic --css custom.css --preview document.md report.pdf
+```
 
 ## 📂 Project Structure
 

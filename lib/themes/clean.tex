@@ -1,0 +1,62 @@
+\documentclass[11pt,a4paper]{article}
+
+% Clean Theme - Minimal, readable design
+\usepackage[margin=30mm]{geometry}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{setspace}
+
+% Font setup - Helvetica for clean look
+\usepackage{fontspec}
+\setmainfont{Helvetica Neue}
+
+% Line spacing
+\onehalfspacing
+
+% Clean colors
+\definecolor{clean-blue}{HTML}{0066cc}
+
+% Code formatting
+\lstset{
+    basicstyle=\ttfamily\footnotesize,
+    backgroundcolor=\color{gray!5},
+    frame=none,
+    breaklines=true
+}
+
+% Link colors
+\hypersetup{
+    colorlinks=true,
+    linkcolor=clean-blue,
+    urlcolor=clean-blue
+}
+
+% Pandoc compatibility
+\providecommand{\tightlist}{\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\usepackage{framed}
+\usepackage{fancyvrb}
+\definecolor{shadecolor}{gray}{0.95}
+\newenvironment{Shaded}{\begin{shaded}}{\end{shaded}}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+
+% Title formatting
+$if(title)$
+\title{$title$}
+$endif$
+$if(author)$
+\author{$author$}
+$endif$
+$if(date)$
+\date{$date$}
+$endif$
+
+\begin{document}
+
+$if(title)$
+\maketitle
+$endif$
+
+$body$
+
+\end{document}

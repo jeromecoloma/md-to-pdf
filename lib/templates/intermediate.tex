@@ -1,0 +1,83 @@
+\documentclass[12pt,a4paper]{article}
+
+% GitHub Theme LaTeX Template
+% Mimics GitHub's clean, readable styling
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{graphicx}
+\usepackage{enumitem}
+\usepackage{booktabs}
+
+% Color definitions (GitHub-inspired)
+\definecolor{github-blue}{HTML}{0366d6}
+\definecolor{github-gray}{HTML}{586069}
+\definecolor{github-light}{HTML}{f6f8fa}
+\definecolor{github-border}{HTML}{e1e4e8}
+
+% Code formatting
+\lstset{
+    basicstyle=\ttfamily\footnotesize,
+    breaklines=true,
+    captionpos=b,
+    numbers=left,
+    numberstyle=\tiny,
+    frame=single,
+    backgroundcolor=\color{github-light},
+    rulecolor=\color{github-border}
+}
+
+% Hyperlink setup
+\hypersetup{
+    colorlinks=true,
+    linkcolor=github-blue,
+    filecolor=github-blue,
+    urlcolor=github-blue,
+    citecolor=github-blue
+}
+
+% Title formatting
+
+\begin{document}
+
+
+\section{Test Document}\label{test-document}
+
+This is a test of the \textbf{theme system}.
+
+\subsection{Features}\label{features}
+
+\begin{itemize}
+\tightlist
+\item
+  Theme support
+\item
+  Multiple styles
+\item
+  Professional output
+\end{itemize}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\BuiltInTok{echo} \StringTok{\textquotesingle{}Hello World\textquotesingle{}}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{quote}
+This is a blockquote
+\end{quote}
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  First item
+\item
+  Second item
+\end{enumerate}
+
+\end{document}

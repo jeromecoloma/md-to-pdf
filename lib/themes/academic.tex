@@ -1,0 +1,62 @@
+\documentclass[12pt,a4paper]{article}
+
+% Academic Theme - Formal academic paper formatting
+\usepackage[margin=25mm]{geometry}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{setspace}
+
+% Font setup - Times New Roman for academic feel
+\usepackage{fontspec}
+\setmainfont{Times New Roman}
+
+% Line spacing
+\onehalfspacing
+
+% Academic colors
+\definecolor{academic-gray}{HTML}{666666}
+
+% Code formatting
+\lstset{
+    basicstyle=\ttfamily\footnotesize,
+    backgroundcolor=\color{gray!10},
+    frame=single,
+    breaklines=true
+}
+
+% Link colors
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    urlcolor=black
+}
+
+% Pandoc compatibility
+\providecommand{\tightlist}{\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\usepackage{framed}
+\usepackage{fancyvrb}
+\definecolor{shadecolor}{gray}{0.95}
+\newenvironment{Shaded}{\begin{shaded}}{\end{shaded}}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+
+% Title formatting
+$if(title)$
+\title{$title$}
+$endif$
+$if(author)$
+\author{$author$}
+$endif$
+$if(date)$
+\date{$date$}
+$endif$
+
+\begin{document}
+
+$if(title)$
+\maketitle
+$endif$
+
+$body$
+
+\end{document}

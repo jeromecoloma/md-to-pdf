@@ -1,0 +1,56 @@
+\documentclass[12pt,a4paper]{article}
+
+% GitHub Theme - Clean, readable styling
+\usepackage[margin=1in]{geometry}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{hyperref}
+
+% GitHub-inspired colors
+\definecolor{github-blue}{HTML}{0366d6}
+\definecolor{github-gray}{HTML}{586069}
+\definecolor{github-light}{HTML}{f6f8fa}
+
+% Code formatting
+\lstset{
+    basicstyle=\ttfamily\footnotesize,
+    backgroundcolor=\color{github-light},
+    frame=single,
+    breaklines=true
+}
+
+% Link colors
+\hypersetup{
+    colorlinks=true,
+    linkcolor=github-blue,
+    urlcolor=github-blue
+}
+
+% Pandoc compatibility
+\providecommand{\tightlist}{\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\usepackage{framed}
+\usepackage{fancyvrb}
+\definecolor{shadecolor}{gray}{0.95}
+\newenvironment{Shaded}{\begin{shaded}}{\end{shaded}}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+
+% Title formatting
+$if(title)$
+\title{$title$}
+$endif$
+$if(author)$
+\author{$author$}
+$endif$
+$if(date)$
+\date{$date$}
+$endif$
+
+\begin{document}
+
+$if(title)$
+\maketitle
+$endif$
+
+$body$
+
+\end{document}

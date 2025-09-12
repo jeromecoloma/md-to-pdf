@@ -1,0 +1,213 @@
+#!/bin/bash
+
+# commit-message - Generate commit messages from staged git changes
+# Analyzes staged changes and generates appropriate commit messages
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SHELL_STARTER_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+source "${SHELL_STARTER_ROOT}/lib/main.sh"
+
+# Function to copy text to clipboard
+copy_to_clipboard() {
+	local text="$1"
+	if command -v pbcopy >/dev/null 2>&1; then
+		echo -n "$text" | pbcopy
+	elif command -v xclip >/dev/null 2>&1; then
+		echo -n "$text" | xclip -selection clipboard
+	elif command -v wl-copy >/dev/null 2>&1; then
+		echo -n "$text" | wl-copy
+	else
+		log::warn "No clipboard tool found. Install pbcopy (macOS), xclip (Linux), or wl-copy (Wayland)"
+		return 1
+	fi
+}
+
+# Function to analyze git diff and generate commit message
+generate_commit_message() {
+	local format="${1:-conventional}"
+	local scope="${2:-}"
+
+	# Check if we're in a git repository
+	if ! git rev-parse --git-dir >/dev/null 2>&1; then
+		log::error "Not in a git repository"
+		exit 1
+	fi
+
+	# Check for staged changes
+	local staged_files
+	staged_files=$(git diff --cached --name-only)
+	if [[ -z "$staged_files" ]]; then
+		log::error "No staged changes found. Stage your changes with 'git add' first."
+		exit 1
+	fi
+
+	# Get the diff of staged changes
+	local diff_output
+	diff_output=$(git diff --cached --no-color)
+
+	# Analyze the changes to determine type and scope
+	local change_type="feat"
+	local has_breaking=false
+	local description=""
+
+	# Count different types of changes
+	local added_files modified_files deleted_files renamed_files
+	added_files=$(echo "$staged_files" | grep -c "^A" || echo "0")
+	modified_files=$(echo "$staged_files" | grep -c "^M" || echo "0")
+	deleted_files=$(echo "$staged_files" | grep -c "^D" || echo "0")
+	renamed_files=$(echo "$staged_files" | grep -c "^R" || echo "0")
+
+	# Determine change type based on file types and changes
+	if [[ "$deleted_files" -gt 0 ]] && [[ "$added_files" -eq 0 ]] && [[ "$modified_files" -eq 0 ]]; then
+		change_type="remove"
+	elif [[ "$renamed_files" -gt 0 ]]; then
+		change_type="refactor"
+	elif echo "$diff_output" | grep -q "BREAKING CHANGE"; then
+		has_breaking=true
+		change_type="feat"
+	fi
+
+	# Try to determine scope from file paths
+	if [[ -z "$scope" ]]; then
+		local common_path
+		common_path=$(echo "$staged_files" | sed 's|^\w*\s*||' | sed 's|/.*||' | sort | uniq -c | sort -nr | head -1 | sed 's/^[[:space:]]*[0-9]*[[:space:]]*//')
+		if [[ -n "$common_path" ]] && [[ "$common_path" != "$(basename "$PWD")" ]]; then
+			scope="$common_path"
+		fi
+	fi
+
+	# Generate description from file names and changes
+	local file_list
+	file_list=$(echo "$staged_files" | sed 's|^\w*\s*||' | head -3 | tr '\n' ', ' | sed 's/, $//')
+	if [[ $(echo "$staged_files" | wc -l) -gt 3 ]]; then
+		file_list="${file_list}, and $(($(echo "$staged_files" | wc -l) - 3)) more"
+	fi
+
+	if [[ "$format" == "simple" ]]; then
+		description="Update $file_list"
+	else
+		# Conventional commit format
+		local prefix="$change_type"
+		if [[ -n "$scope" ]]; then
+			prefix="$change_type($scope)"
+		fi
+		if [[ "$has_breaking" == "true" ]]; then
+			prefix="$prefix!"
+		fi
+
+		# Try to get a more descriptive message from the diff
+		local summary=""
+		if echo "$diff_output" | grep -q "test"; then
+			summary="add tests"
+		elif echo "$diff_output" | grep -q "fix\|bug"; then
+			summary="fix issue"
+			change_type="fix"
+		elif echo "$diff_output" | grep -q "doc\|readme\|comment"; then
+			summary="update documentation"
+			change_type="docs"
+		elif echo "$diff_output" | grep -q "style\|format\|lint"; then
+			summary="improve code style"
+			change_type="style"
+		else
+			summary="update $file_list"
+		fi
+
+		description="$prefix: $summary"
+	fi
+
+	echo "$description"
+}
+
+show_help() {
+	cat <<EOF
+Usage: $(basename "$0") [OPTIONS]
+
+Generate commit messages from staged git changes.
+
+OPTIONS:
+    -h, --help           Show this help message and exit
+    -v, --version        Show version information and exit
+    --format FORMAT      Message format: conventional (default) or simple
+    --scope SCOPE        Add scope to conventional commit format
+
+EXAMPLES:
+    $(basename "$0")                          # Generate conventional commit message
+    $(basename "$0") --format simple          # Generate simple format message
+    $(basename "$0") --scope api              # Add scope to conventional format
+
+The generated message will be copied to your clipboard and displayed.
+EOF
+}
+
+main() {
+	local format="conventional"
+	local scope=""
+
+	while [[ $# -gt 0 ]]; do
+		case $1 in
+		--format)
+			if [[ -n "${2:-}" ]]; then
+				format="$2"
+				shift 2
+			else
+				log::error "Format requires a value (conventional or simple)"
+				exit 1
+			fi
+			;;
+		--scope)
+			if [[ -n "${2:-}" ]]; then
+				scope="$2"
+				shift 2
+			else
+				log::error "Scope requires a value"
+				exit 1
+			fi
+			;;
+		--help | -h | --version | -v)
+			parse_common_args "$(basename "$0")" "$@"
+			;;
+		*)
+			log::error "Unknown option: $1"
+			echo "Use --help for usage information."
+			exit 1
+			;;
+		esac
+	done
+
+	# Validate format
+	if [[ "$format" != "conventional" ]] && [[ "$format" != "simple" ]]; then
+		log::error "Invalid format: $format. Use 'conventional' or 'simple'"
+		exit 1
+	fi
+
+	log::info "Analyzing staged changes..."
+
+	local commit_message
+	commit_message=$(generate_commit_message "$format" "$scope")
+
+	if [[ -z "$commit_message" ]]; then
+		log::error "Failed to generate commit message"
+		exit 1
+	fi
+
+	# Copy to clipboard
+	if copy_to_clipboard "$commit_message"; then
+		log::success "Commit message copied to clipboard"
+	else
+		log::warn "Failed to copy to clipboard, but message generated successfully"
+	fi
+
+	# Display the message
+	echo ""
+	echo -e "${COLOR_BOLD}Generated commit message:${COLOR_RESET}"
+	echo -e "${COLOR_CYAN}$commit_message${COLOR_RESET}"
+	echo ""
+	echo "Ready to use with: git commit -m \"$commit_message\""
+}
+
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+	main "$@"
+fi

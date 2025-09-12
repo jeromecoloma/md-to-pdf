@@ -14,6 +14,8 @@ setup() {
 	TEST_PLAIN_FILE="${BATS_TEST_TMPDIR}/plain.txt"
 	TEST_OUTPUT_FILE="${BATS_TEST_TMPDIR}/output.pdf"
 	TEST_EXISTING_PDF="${BATS_TEST_TMPDIR}/existing.pdf"
+	TEST_CSS_FILE="${BATS_TEST_TMPDIR}/test.css"
+	TEST_INVALID_CSS="${BATS_TEST_TMPDIR}/invalid.css"
 
 	# Create test markdown content
 	cat >"$TEST_MD_FILE" <<'EOF'
@@ -43,11 +45,28 @@ EOF
 
 	# Create existing PDF file (dummy)
 	echo "dummy pdf content" >"$TEST_EXISTING_PDF"
+
+	# Create valid CSS file
+	cat >"$TEST_CSS_FILE" <<'EOF'
+body {
+	font-family: Arial, sans-serif;
+	margin: 20px;
+}
+
+h1 {
+	color: #333;
+	border-bottom: 2px solid #ccc;
+}
+EOF
+
+	# Create invalid CSS file (no CSS rules)
+	echo "This is not CSS content" >"$TEST_INVALID_CSS"
 }
 
 teardown() {
 	# Clean up test files
 	rm -f "$TEST_MD_FILE" "$TEST_EMPTY_FILE" "$TEST_PLAIN_FILE" "$TEST_OUTPUT_FILE" "$TEST_EXISTING_PDF"
+	rm -f "$TEST_CSS_FILE" "$TEST_INVALID_CSS"
 	rm -f "${BATS_TEST_TMPDIR}"/*.pdf
 }
 
@@ -242,4 +261,187 @@ EOF
 
 	# Clean up
 	rm -f "${complex_file%.*}.pdf"
+}
+
+# Theme and Preview Tests
+
+@test "md-to-pdf: list themes" {
+	run_script "md-to-pdf" --list-themes
+	assert_success
+	assert_output --partial "Available themes:"
+	assert_output --partial "github"
+	assert_output --partial "academic"
+	assert_output --partial "clean"
+	assert_output --partial "modern"
+}
+
+@test "md-to-pdf: short list themes flag" {
+	run_script "md-to-pdf" -l
+	assert_success
+	assert_output --partial "Available themes:"
+	assert_output --partial "github"
+}
+
+@test "md-to-pdf: valid theme - github" {
+	run_script "md-to-pdf" --theme github "$TEST_MD_FILE" "$TEST_OUTPUT_FILE"
+	assert_success
+	assert_output --partial "Using theme: github"
+	assert_output --partial "Conversion completed successfully"
+	assert [ -f "$TEST_OUTPUT_FILE" ]
+}
+
+@test "md-to-pdf: valid theme - academic" {
+	run_script "md-to-pdf" --theme academic "$TEST_MD_FILE" "$TEST_OUTPUT_FILE"
+	assert_success
+	assert_output --partial "Using theme: academic"
+	assert_output --partial "Conversion completed successfully"
+	assert [ -f "$TEST_OUTPUT_FILE" ]
+}
+
+@test "md-to-pdf: valid theme - clean" {
+	run_script "md-to-pdf" --theme clean "$TEST_MD_FILE" "$TEST_OUTPUT_FILE"
+	assert_success
+	assert_output --partial "Using theme: clean"
+	assert_output --partial "Conversion completed successfully"
+	assert [ -f "$TEST_OUTPUT_FILE" ]
+}
+
+@test "md-to-pdf: valid theme - modern" {
+	run_script "md-to-pdf" --theme modern "$TEST_MD_FILE" "$TEST_OUTPUT_FILE"
+	assert_success
+	assert_output --partial "Using theme: modern"
+	assert_output --partial "Conversion completed successfully"
+	assert [ -f "$TEST_OUTPUT_FILE" ]
+}
+
+@test "md-to-pdf: short theme flag" {
+	run_script "md-to-pdf" -t github "$TEST_MD_FILE" "$TEST_OUTPUT_FILE"
+	assert_success
+	assert_output --partial "Using theme: github"
+	assert_output --partial "Conversion completed successfully"
+}
+
+@test "md-to-pdf: invalid theme" {
+	run_script "md-to-pdf" --theme invalid "$TEST_MD_FILE"
+	assert_failure
+	assert_output --partial "Invalid theme: invalid"
+	assert_output --partial "Available themes:"
+	assert_output --partial "github"
+	assert_output --partial "academic"
+	assert_output --partial "clean"
+	assert_output --partial "modern"
+}
+
+@test "md-to-pdf: preview mode" {
+	run_script "md-to-pdf" --preview "$TEST_MD_FILE"
+	assert_success
+	assert_output --partial "=== CONVERSION PREVIEW ==="
+	assert_output --partial "Input file: $TEST_MD_FILE"
+	assert_output --partial "File size:"
+	assert_output --partial "Line count:"
+	assert_output --partial "Output file:"
+	assert_output --partial "Selected theme: github"
+	assert_output --partial "Pandoc command:"
+	assert_output --partial "pandoc"
+	assert_output --partial "--pdf-engine=xelatex"
+	refute_output --partial "Conversion completed successfully"
+}
+
+@test "md-to-pdf: short preview flag" {
+	run_script "md-to-pdf" -p "$TEST_MD_FILE"
+	assert_success
+	assert_output --partial "=== CONVERSION PREVIEW ==="
+	assert_output --partial "Input file: $TEST_MD_FILE"
+}
+
+@test "md-to-pdf: preview with custom theme" {
+	run_script "md-to-pdf" --preview --theme academic "$TEST_MD_FILE"
+	assert_success
+	assert_output --partial "Selected theme: academic"
+	assert_output --partial "pandoc"
+	assert_output --partial "academic.tex"
+}
+
+@test "md-to-pdf: preview with custom output" {
+	local custom_output="${BATS_TEST_TMPDIR}/custom.pdf"
+	run_script "md-to-pdf" --preview "$TEST_MD_FILE" "$custom_output"
+	assert_success
+	assert_output --partial "Output file: $custom_output"
+}
+
+@test "md-to-pdf: custom CSS file" {
+	run_script "md-to-pdf" --css "$TEST_CSS_FILE" "$TEST_MD_FILE" "$TEST_OUTPUT_FILE"
+	assert_success
+	assert_output --partial "Using custom CSS: $TEST_CSS_FILE"
+	assert_output --partial "Conversion completed successfully"
+	assert [ -f "$TEST_OUTPUT_FILE" ]
+}
+
+@test "md-to-pdf: short CSS flag" {
+	run_script "md-to-pdf" -c "$TEST_CSS_FILE" "$TEST_MD_FILE" "$TEST_OUTPUT_FILE"
+	assert_success
+	assert_output --partial "Using custom CSS: $TEST_CSS_FILE"
+}
+
+@test "md-to-pdf: CSS file not found" {
+	run_script "md-to-pdf" --css nonexistent.css "$TEST_MD_FILE"
+	assert_failure
+	assert_output --partial "CSS file not found: nonexistent.css"
+}
+
+@test "md-to-pdf: CSS file not readable" {
+	local unreadable_css="${BATS_TEST_TMPDIR}/unreadable.css"
+	echo "body { color: red; }" >"$unreadable_css"
+	chmod 000 "$unreadable_css"
+
+	run_script "md-to-pdf" --css "$unreadable_css" "$TEST_MD_FILE"
+	assert_failure
+	assert_output --partial "CSS file is not readable: $unreadable_css"
+
+	# Restore permissions for cleanup
+	chmod 644 "$unreadable_css"
+}
+
+@test "md-to-pdf: invalid CSS content warning" {
+	run_script "md-to-pdf" --css "$TEST_INVALID_CSS" "$TEST_MD_FILE" "$TEST_OUTPUT_FILE"
+	assert_success
+	assert_output --partial "CSS file does not appear to contain valid CSS rules"
+	assert_output --partial "Proceeding anyway"
+	assert_output --partial "Conversion completed successfully"
+}
+
+@test "md-to-pdf: preview with custom CSS" {
+	run_script "md-to-pdf" --preview --css "$TEST_CSS_FILE" "$TEST_MD_FILE"
+	assert_success
+	assert_output --partial "Custom CSS: $TEST_CSS_FILE (found)"
+	assert_output --partial "pandoc"
+	assert_output --partial "--css"
+}
+
+@test "md-to-pdf: theme and CSS together" {
+	run_script "md-to-pdf" --theme academic --css "$TEST_CSS_FILE" "$TEST_MD_FILE" "$TEST_OUTPUT_FILE"
+	assert_success
+	assert_output --partial "Using theme: academic"
+	assert_output --partial "Using custom CSS: $TEST_CSS_FILE"
+	assert_output --partial "Conversion completed successfully"
+	assert [ -f "$TEST_OUTPUT_FILE" ]
+}
+
+@test "md-to-pdf: quiet mode with theme" {
+	run_script "md-to-pdf" --quiet --theme modern "$TEST_MD_FILE" "$TEST_OUTPUT_FILE"
+	assert_success
+	refute_output --partial "md-to-pdf tool initialized"
+	refute_output --partial "Using theme: modern"
+	assert [ -f "$TEST_OUTPUT_FILE" ]
+}
+
+@test "md-to-pdf: force mode with theme" {
+	# Create existing output file
+	echo "existing content" >"$TEST_OUTPUT_FILE"
+
+	run_script "md-to-pdf" --force --theme clean "$TEST_MD_FILE" "$TEST_OUTPUT_FILE"
+	assert_success
+	assert_output --partial "Overwriting existing file"
+	assert_output --partial "Using theme: clean"
+	assert_output --partial "Conversion completed successfully"
 }

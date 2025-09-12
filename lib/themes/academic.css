@@ -1,0 +1,188 @@
+/* Academic Theme - Formal academic paper styling */
+
+body {
+    font-family: "Times New Roman", Times, serif;
+    font-size: 12pt;
+    line-height: 1.5;
+    color: #000000;
+    background-color: #ffffff;
+    margin: 0;
+    padding: 25mm 20mm 25mm 25mm;
+    text-align: justify;
+}
+
+h1 {
+    font-size: 18pt;
+    font-weight: bold;
+    text-align: center;
+    margin-top: 0;
+    margin-bottom: 20pt;
+    page-break-after: avoid;
+}
+
+h2 {
+    font-size: 14pt;
+    font-weight: bold;
+    margin-top: 18pt;
+    margin-bottom: 12pt;
+    page-break-after: avoid;
+    border-bottom: 1pt solid #000000;
+    padding-bottom: 4pt;
+}
+
+h3 {
+    font-size: 12pt;
+    font-weight: bold;
+    margin-top: 14pt;
+    margin-bottom: 8pt;
+    page-break-after: avoid;
+}
+
+h4, h5, h6 {
+    font-size: 12pt;
+    font-weight: bold;
+    font-style: italic;
+    margin-top: 12pt;
+    margin-bottom: 6pt;
+    page-break-after: avoid;
+}
+
+p {
+    margin-top: 0;
+    margin-bottom: 12pt;
+    text-indent: 12pt;
+}
+
+p:first-child {
+    text-indent: 0;
+}
+
+.abstract {
+    font-style: italic;
+    margin-left: 20pt;
+    margin-right: 20pt;
+    margin-bottom: 18pt;
+}
+
+.author {
+    text-align: center;
+    font-size: 14pt;
+    margin-bottom: 8pt;
+}
+
+.affiliation {
+    text-align: center;
+    font-size: 10pt;
+    margin-bottom: 18pt;
+}
+
+.date {
+    text-align: center;
+    font-size: 10pt;
+    margin-bottom: 24pt;
+}
+
+a {
+    color: #000000;
+    text-decoration: none;
+    border-bottom: 0.5pt solid #000000;
+}
+
+code {
+    font-family: "Courier New", Courier, monospace;
+    font-size: 10pt;
+    background-color: #f5f5f5;
+    padding: 2pt 4pt;
+    border: 0.5pt solid #cccccc;
+}
+
+pre {
+    font-family: "Courier New", Courier, monospace;
+    font-size: 10pt;
+    background-color: #f9f9f9;
+    border: 0.5pt solid #cccccc;
+    padding: 8pt;
+    margin: 12pt 0;
+    overflow: auto;
+    page-break-inside: avoid;
+}
+
+pre code {
+    background-color: transparent;
+    padding: 0;
+    border: none;
+}
+
+blockquote {
+    font-style: italic;
+    margin: 12pt 20pt;
+    padding-left: 12pt;
+    border-left: 2pt solid #cccccc;
+    color: #666666;
+}
+
+ul, ol {
+    margin-top: 0;
+    margin-bottom: 12pt;
+    padding-left: 24pt;
+}
+
+li {
+    margin-bottom: 6pt;
+}
+
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 12pt 0;
+    font-size: 10pt;
+    page-break-inside: avoid;
+}
+
+table th, table td {
+    border: 0.5pt solid #000000;
+    padding: 6pt 8pt;
+    text-align: left;
+}
+
+table th {
+    background-color: #f5f5f5;
+    font-weight: bold;
+}
+
+hr {
+    border: none;
+    border-top: 0.5pt solid #cccccc;
+    margin: 18pt 0;
+}
+
+img {
+    max-width: 100%;
+    height: auto;
+    page-break-inside: avoid;
+}
+
+.footnote {
+    font-size: 9pt;
+    line-height: 1.3;
+    margin-top: 12pt;
+    border-top: 0.5pt solid #cccccc;
+    padding-top: 8pt;
+}
+
+/* Page breaks */
+.page-break {
+    page-break-before: always;
+}
+
+/* References */
+.references {
+    font-size: 10pt;
+    line-height: 1.4;
+    margin-top: 18pt;
+}
+
+.references h2 {
+    font-size: 12pt;
+    margin-bottom: 12pt;
+}
