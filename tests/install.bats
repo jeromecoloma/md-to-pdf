@@ -116,3 +116,75 @@ run_install() {
     assert_success
     assert_output --partial "$TEST_PREFIX/"
 }
+
+@test "install.sh: curl installation failure (no bin directory)" {
+    # Simulate curl | bash scenario where script runs without bin/ directory
+    cd "$TEST_TMP_DIR"
+    # Remove any bin directory that might exist
+    rm -rf bin
+    # Don't use run_install helper as it creates bin/ directory
+    run "$PROJECT_ROOT/install.sh"
+    assert_failure
+    assert_output --partial "No 'bin' directory found"
+    assert_output --partial "Are you running this from the project root?"
+}
+
+@test "install.sh: adds PATH entry to shell config" {
+    # Mock shell config file based on detected shell
+    export HOME="$TEST_TMP_DIR"
+    local shell_name
+    shell_name=$(basename "$SHELL")
+    local mock_config
+
+    case "$shell_name" in
+        zsh)
+            mock_config="$TEST_TMP_DIR/.zshrc"
+            ;;
+        bash)
+            mock_config="$TEST_TMP_DIR/.bashrc"
+            ;;
+        *)
+            mock_config="$TEST_TMP_DIR/.bashrc"
+            ;;
+    esac
+
+    run_install --prefix "$TEST_PREFIX"
+    assert_success
+
+    # Check that PATH entry was added to shell config
+    assert [ -f "$mock_config" ]
+    run grep "export PATH=\"$TEST_PREFIX:\$PATH\"" "$mock_config"
+    assert_success
+    assert_output --partial "$TEST_PREFIX"
+}
+
+@test "install.sh: skips PATH entry if already exists" {
+    # Mock shell config file with existing PATH entry
+    export HOME="$TEST_TMP_DIR"
+    local shell_name
+    shell_name=$(basename "$SHELL")
+    local mock_config
+
+    case "$shell_name" in
+        zsh)
+            mock_config="$TEST_TMP_DIR/.zshrc"
+            ;;
+        bash)
+            mock_config="$TEST_TMP_DIR/.bashrc"
+            ;;
+        *)
+            mock_config="$TEST_TMP_DIR/.bashrc"
+            ;;
+    esac
+
+    # Create config file with existing PATH entry
+    echo "export PATH=\"$TEST_PREFIX:\$PATH\"" >"$mock_config"
+
+    run_install --prefix "$TEST_PREFIX"
+    assert_success
+
+    # Should not add duplicate entry
+    local path_count
+    path_count=$(grep -c "export PATH=\"$TEST_PREFIX:\$PATH\"" "$mock_config")
+    assert [ "$path_count" -eq 1 ]
+}

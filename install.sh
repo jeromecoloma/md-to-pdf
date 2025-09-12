@@ -34,6 +34,60 @@ log_error() {
 	echo -e "${RED}[ERROR]${NC} $1"
 }
 
+# Detect user's shell configuration file
+detect_shell_config() {
+	local shell_name
+	shell_name=$(basename "$SHELL")
+
+	case "$shell_name" in
+		zsh)
+			echo "$HOME/.zshrc"
+			;;
+		bash)
+			# Check for .bashrc first, then .bash_profile
+			if [[ -f "$HOME/.bashrc" ]]; then
+				echo "$HOME/.bashrc"
+			else
+				echo "$HOME/.bash_profile"
+			fi
+			;;
+		fish)
+			echo "$HOME/.config/fish/config.fish"
+			;;
+		*)
+			# Default to .bashrc for unknown shells
+			echo "$HOME/.bashrc"
+			;;
+	esac
+}
+
+# Add directory to PATH in shell configuration
+add_to_path() {
+	local config_file="$1"
+	local path_to_add="$2"
+
+	# Check if PATH entry already exists
+	if grep -q "export PATH.*$path_to_add" "$config_file" 2>/dev/null; then
+		log_info "PATH entry already exists in $config_file"
+		return 0
+	fi
+
+	log_info "Adding $path_to_add to PATH in $config_file"
+
+	# Create config file if it doesn't exist
+	if [[ ! -f "$config_file" ]]; then
+		touch "$config_file"
+		log_info "Created new config file: $config_file"
+	fi
+
+	# Add PATH export to the end of the file
+	echo "" >>"$config_file"
+	echo "# Added by md-to-pdf installer" >>"$config_file"
+	echo "export PATH=\"$path_to_add:\$PATH\"" >>"$config_file"
+
+	log_success "Added PATH entry to $config_file"
+}
+
 # Show usage information
 show_help() {
 	cat <<EOF
@@ -41,13 +95,18 @@ md-to-pdf Installer
 
 Usage: $0 [OPTIONS]
 
+DESCRIPTION:
+    This installer copies CLI scripts from the bin/ directory to your system
+    and automatically adds the installation directory to your PATH environment
+    variable so you can run the scripts from anywhere.
+
 OPTIONS:
     --prefix PATH    Install scripts to PATH (default: $DEFAULT_PREFIX)
     --help, -h       Show this help message
 
 EXAMPLES:
-    $0                           # Install to $DEFAULT_PREFIX
-    $0 --prefix /home/user/bin   # Install to custom location
+    $0                           # Install to $DEFAULT_PREFIX and update PATH
+    $0 --prefix /home/user/bin   # Install to custom location and update PATH
     curl -fsSL https://raw.githubusercontent.com/jeromecoloma/md-to-pdf/main/install.sh | bash
 
 SECURITY NOTE:
@@ -149,9 +208,16 @@ main() {
 	init_manifest
 	install_scripts
 
+	# Setup PATH in shell configuration
+	local shell_config
+	shell_config=$(detect_shell_config)
+	add_to_path "$shell_config" "$PREFIX"
+
 	log_success "Installation complete!"
 	log_info "Scripts installed to: $PREFIX"
 	log_info "Install manifest saved to: $MANIFEST_FILE"
+	log_info "PATH updated in: $shell_config"
+	log_info "Please run 'source $shell_config' or restart your shell to use the installed scripts"
 	log_info "Use ./uninstall.sh to remove installed scripts"
 }
 

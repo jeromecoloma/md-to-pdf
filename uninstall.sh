@@ -33,6 +33,94 @@ log_error() {
 	echo -e "${RED}[ERROR]${NC} $1"
 }
 
+# Detect user's shell configuration file
+detect_shell_config() {
+	local shell_name
+	shell_name=$(basename "$SHELL")
+
+	case "$shell_name" in
+		zsh)
+			echo "$HOME/.zshrc"
+			;;
+		bash)
+			# Check for .bashrc first, then .bash_profile
+			if [[ -f "$HOME/.bashrc" ]]; then
+				echo "$HOME/.bashrc"
+			else
+				echo "$HOME/.bash_profile"
+			fi
+			;;
+		fish)
+			echo "$HOME/.config/fish/config.fish"
+			;;
+		*)
+			# Default to .bashrc for unknown shells
+			echo "$HOME/.bashrc"
+			;;
+	esac
+}
+
+# Remove PATH entry from shell configuration
+remove_from_path() {
+	local config_file="$1"
+	local path_to_remove="$2"
+
+	if [[ ! -f "$config_file" ]]; then
+		log_info "Shell config file not found: $config_file"
+		return 0
+	fi
+
+	# Check if PATH entry exists
+	if ! grep -q "export PATH.*$path_to_remove" "$config_file"; then
+		log_info "No PATH entry found for $path_to_remove in $config_file"
+		return 0
+	fi
+
+	log_info "Removing $path_to_remove from PATH in $config_file"
+
+	# Create a temporary file without the PATH entries
+	local temp_file
+	temp_file=$(mktemp)
+
+	# Remove lines containing the PATH export for this directory
+	# Also remove the comment line that precedes it
+	local skip_next=false
+	while IFS= read -r line; do
+		if [[ "$skip_next" == "true" ]]; then
+			skip_next=false
+			continue
+		fi
+
+		if [[ "$line" == "# Added by md-to-pdf installer" ]]; then
+			skip_next=true
+			continue
+		fi
+
+		if [[ "$line" == "export PATH=\"$path_to_remove:\$PATH\"" ]]; then
+			continue
+		fi
+
+		echo "$line" >>"$temp_file"
+	done <"$config_file"
+
+	# Replace the original file
+	mv "$temp_file" "$config_file"
+
+	log_success "Removed PATH entry from $config_file"
+}
+
+# Read install prefix from manifest
+get_install_prefix() {
+	local prefix_line
+	prefix_line=$(grep "^# Install prefix:" "$MANIFEST_FILE")
+	if [[ -n "$prefix_line" ]]; then
+		echo "${prefix_line#*: }"
+	else
+		# Fallback to default if not found in manifest
+		echo "$HOME/.config/md-to-pdf/bin"
+	fi
+}
+
 # Show usage information
 show_help() {
 	cat <<EOF
@@ -209,10 +297,20 @@ main() {
 	show_files
 	get_confirmation
 	remove_files
+
+	# Clean up PATH entry
+	local install_prefix
+	install_prefix=$(get_install_prefix)
+	local shell_config
+	shell_config=$(detect_shell_config)
+	remove_from_path "$shell_config" "$install_prefix"
+
 	cleanup_manifest
 
 	log_success "Uninstallation complete!"
 	log_info "All md-to-pdf files have been removed from your system."
+	log_info "PATH entry removed from: $shell_config"
+	log_info "Please run 'source $shell_config' or restart your shell for changes to take effect."
 }
 
 # Run main function if script is executed directly

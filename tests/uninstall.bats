@@ -149,3 +149,35 @@ EOF
     assert [ -d "$TEST_MANIFEST_DIR" ]
     assert [ -f "$TEST_MANIFEST_DIR/other-file" ]
 }
+
+@test "uninstall.sh: removes PATH entry from shell config" {
+    create_mock_installation
+
+    # Create mock shell config with PATH entry
+    local shell_name
+    shell_name=$(basename "$SHELL")
+    local mock_config
+
+    case "$shell_name" in
+        zsh)
+            mock_config="$TEST_TMP_DIR/.zshrc"
+            ;;
+        bash)
+            mock_config="$TEST_TMP_DIR/.bashrc"
+            ;;
+        *)
+            mock_config="$TEST_TMP_DIR/.bashrc"
+            ;;
+    esac
+
+    # Add PATH entry to mock config
+    echo "# Added by md-to-pdf installer" >"$mock_config"
+    echo "export PATH=\"$TEST_PREFIX:\$PATH\"" >>"$mock_config"
+
+    run_uninstall --force
+    assert_success
+
+    # Check that PATH entry was removed
+    run grep "export PATH=\"$TEST_PREFIX:\$PATH\"" "$mock_config"
+    assert_failure  # Should not find the PATH entry
+}
