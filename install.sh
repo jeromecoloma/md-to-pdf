@@ -215,7 +215,7 @@ init_manifest() {
 	echo "" >>"$MANIFEST_FILE"
 }
 
-# Install scripts from bin/ directory
+# Install scripts and dependencies
 install_scripts() {
 	local script_count=0
 
@@ -225,11 +225,35 @@ install_scripts() {
 		exit 1
 	fi
 
+	# Check if lib directory exists
+	if [[ ! -d "lib" ]]; then
+		log_error "No 'lib' directory found. Shell Starter framework requires lib/ directory."
+		exit 1
+	fi
+
+	# Create parent directory for PREFIX (to install lib alongside bin)
+	local install_root
+	install_root=$(dirname "$PREFIX")
+	if [[ ! -d "$install_root" ]]; then
+		log_info "Creating install root directory: $install_root"
+		mkdir -p "$install_root"
+	fi
+
 	# Check if PREFIX directory exists, create if needed
 	if [[ ! -d "$PREFIX" ]]; then
 		log_info "Creating install directory: $PREFIX"
 		mkdir -p "$PREFIX"
 	fi
+
+	# Install lib directory to parent of bin
+	local lib_dest="$install_root/lib"
+	if [[ -d "$lib_dest" ]]; then
+		log_info "Removing existing lib directory: $lib_dest"
+		rm -rf "$lib_dest"
+	fi
+	log_info "Installing lib directory -> $lib_dest"
+	cp -r "lib" "$lib_dest"
+	echo "$lib_dest/" >>"$MANIFEST_FILE"
 
 	# Install each script in bin/
 	for script in bin/*; do
