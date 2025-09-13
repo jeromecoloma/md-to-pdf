@@ -255,6 +255,14 @@ install_scripts() {
 	cp -r "lib" "$lib_dest"
 	echo "$lib_dest/" >>"$MANIFEST_FILE"
 
+	# Install VERSION file to install root (needed for version detection)
+	if [[ -f "VERSION" ]]; then
+		local version_dest="$install_root/VERSION"
+		log_info "Installing VERSION file -> $version_dest"
+		cp "VERSION" "$version_dest"
+		echo "$version_dest" >>"$MANIFEST_FILE"
+	fi
+
 	# Install each script in bin/
 	for script in bin/*; do
 		if [[ -f "$script" && -x "$script" ]]; then

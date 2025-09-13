@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed shell script formatting to comply with shfmt standards
 - Fixed installer message to reference correct uninstall command (--uninstall instead of ./uninstall.sh)
 - Removed unnecessary Shell Starter example scripts to focus purely on md-to-pdf functionality
+- Fixed version detection by ensuring VERSION file is installed alongside other components
 
 ### Changed
 - Improved installer with automatic project download using git/curl/wget fallbacks
