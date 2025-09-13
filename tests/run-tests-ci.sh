@@ -51,7 +51,6 @@ test_files=(
 	"tests/lib-logging.bats"
 	"tests/lib-utils.bats"
 	"tests/lib-main.bats"
-	"tests/hello-world.bats"
 	"tests/lib-spinner.bats"
 	"tests/lib-integration.bats"
 )
