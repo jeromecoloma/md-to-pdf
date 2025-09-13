@@ -9,6 +9,8 @@ set -euo pipefail
 DEFAULT_PREFIX="$HOME/.config/md-to-pdf/bin"
 MANIFEST_DIR="$HOME/.config/md-to-pdf"
 MANIFEST_FILE="$MANIFEST_DIR/install-manifest.txt"
+REPO_URL="https://github.com/jeromecoloma/md-to-pdf"
+TEMP_DIR=""
 
 # Colors for output
 RED='\033[0;31m'
@@ -139,6 +141,63 @@ parse_args() {
 	done
 }
 
+# Download project files if running remotely
+download_project() {
+	if [[ -d "bin" ]]; then
+		log_info "Found local bin/ directory, using local files"
+		return 0
+	fi
+
+	log_info "No local bin/ directory found, downloading project files..."
+
+	# Create temporary directory
+	TEMP_DIR=$(mktemp -d)
+	cd "$TEMP_DIR"
+
+	log_info "Downloading from $REPO_URL..."
+
+	# Try git first, fallback to wget/curl
+	if command -v git >/dev/null 2>&1; then
+		if ! git clone --depth 1 "$REPO_URL" . 2>/dev/null; then
+			log_error "Failed to clone repository with git"
+			cleanup_temp
+			exit 1
+		fi
+	elif command -v curl >/dev/null 2>&1; then
+		if ! curl -fsSL "$REPO_URL/archive/main.tar.gz" | tar -xz --strip-components=1 2>/dev/null; then
+			log_error "Failed to download and extract project files with curl"
+			cleanup_temp
+			exit 1
+		fi
+	elif command -v wget >/dev/null 2>&1; then
+		if ! wget -qO- "$REPO_URL/archive/main.tar.gz" | tar -xz --strip-components=1 2>/dev/null; then
+			log_error "Failed to download and extract project files with wget"
+			cleanup_temp
+			exit 1
+		fi
+	else
+		log_error "No download tool available (git, curl, or wget required)"
+		cleanup_temp
+		exit 1
+	fi
+
+	if [[ ! -d "bin" ]]; then
+		log_error "Downloaded project does not contain bin/ directory"
+		cleanup_temp
+		exit 1
+	fi
+
+	log_success "Project files downloaded successfully"
+}
+
+# Cleanup temporary directory
+cleanup_temp() {
+	if [[ -n "$TEMP_DIR" && -d "$TEMP_DIR" ]]; then
+		log_info "Cleaning up temporary files..."
+		rm -rf "$TEMP_DIR"
+	fi
+}
+
 # Create manifest directory if it doesn't exist
 create_manifest_dir() {
 	if [[ ! -d "$MANIFEST_DIR" ]]; then
@@ -204,6 +263,7 @@ main() {
 	log_info "Starting md-to-pdf installation..."
 
 	parse_args "$@"
+	download_project
 	create_manifest_dir
 	init_manifest
 	install_scripts
@@ -212,6 +272,9 @@ main() {
 	local shell_config
 	shell_config=$(detect_shell_config)
 	add_to_path "$shell_config" "$PREFIX"
+
+	# Cleanup if we downloaded files
+	cleanup_temp
 
 	log_success "Installation complete!"
 	log_info "Scripts installed to: $PREFIX"

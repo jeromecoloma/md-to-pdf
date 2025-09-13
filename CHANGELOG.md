@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- Fixed installer script to work with `curl | bash` by downloading project files automatically
+- Enhanced uninstaller to completely remove empty directories after cleanup
+- Resolved installer failure when running remotely without local project files
+
+### Changed
+- Improved installer with automatic project download using git/curl/wget fallbacks
+- Enhanced uninstaller cleanup to remove empty bin and config directories
+
 ## [0.2.1] - 2025-09-13
 
 ### Fixed

@@ -277,6 +277,17 @@ cleanup_manifest() {
 		log_warn "Failed to remove manifest file: $MANIFEST_FILE"
 	fi
 
+	# Remove empty bin directory if it exists
+	local install_prefix
+	install_prefix=$(get_install_prefix)
+	if [[ -d "$install_prefix" ]] && [[ -z "$(ls -A "$install_prefix" 2>/dev/null)" ]]; then
+		if rmdir "$install_prefix"; then
+			log_info "Removed empty bin directory: $install_prefix"
+		else
+			log_warn "Failed to remove bin directory: $install_prefix"
+		fi
+	fi
+
 	# Remove manifest directory if empty
 	if [[ -d "$MANIFEST_DIR" ]] && [[ -z "$(ls -A "$MANIFEST_DIR" 2>/dev/null)" ]]; then
 		if rmdir "$MANIFEST_DIR"; then
