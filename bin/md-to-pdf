@@ -37,10 +37,10 @@ cleanup() {
 	local exit_code=$?
 	local interrupted=false
 
-	# Check if we were interrupted
-	if [[ $exit_code -eq 130 ]]; then
+	# Check if we were interrupted (SIGINT = 130 or direct signal trap)
+	if [[ $exit_code -eq 130 ]] || [[ "$1" == "INT" ]]; then
 		interrupted=true
-		log::warn "Operation interrupted by user"
+		log::info "Operation interrupted by user (Ctrl+C)"
 	fi
 
 	# Clean up temporary files
@@ -67,13 +67,15 @@ cleanup() {
 	fi
 
 	if [[ "$interrupted" == "true" ]]; then
-		log::info "Cleanup completed"
+		echo "" # Add newline after ^C
+		log::info "Exiting..."
 		exit $EXIT_INTERRUPTED
 	fi
 }
 
 # Set up trap for cleanup on interrupt
-trap cleanup INT TERM
+trap 'cleanup INT' INT
+trap 'cleanup TERM' TERM
 
 show_help() {
 	cat <<EOF
@@ -971,7 +973,11 @@ prompt_theme_selection() {
 	done
 
 	log::info ""
-	read -p "Select theme (1-${#AVAILABLE_THEMES[@]}, or press Enter for default '$current_theme'): " -r theme_choice
+	if ! read -p "Select theme (1-${#AVAILABLE_THEMES[@]}, or press Enter for default '$current_theme'): " -r theme_choice; then
+		echo "" # Add newline after ^C
+		log::info "Exiting interactive mode..."
+		exit $EXIT_INTERRUPTED
+	fi
 	echo
 
 	if [[ -z "$theme_choice" ]]; then
@@ -1027,7 +1033,11 @@ prompt_engine_selection() {
 	done
 
 	log::info ""
-	read -p "Select PDF engine (1-${#AVAILABLE_ENGINES[@]}, or press Enter for auto-selection): " -r engine_choice
+	if ! read -p "Select PDF engine (1-${#AVAILABLE_ENGINES[@]}, or press Enter for auto-selection): " -r engine_choice; then
+		echo "" # Add newline after ^C
+		log::info "Exiting interactive mode..."
+		exit $EXIT_INTERRUPTED
+	fi
 	echo
 
 	if [[ -z "$engine_choice" ]]; then
@@ -1082,16 +1092,27 @@ interactive_mode() {
 
 	log::info "=== INTERACTIVE MODE ==="
 	log::info "Welcome to md-to-pdf! Let's convert your markdown file to PDF."
+	log::info "Type 'exit', 'quit', or 'q' at any prompt to exit, or press Ctrl+C"
 	log::info ""
 
 	# Prompt for input file
 	while [[ -z "$input_file" ]]; do
-		read -p "Enter path to markdown file: " -r input_file
+		if ! read -p "Enter path to markdown file (or 'exit' to quit): " -r input_file; then
+			echo "" # Add newline after ^C
+			log::info "Exiting interactive mode..."
+			exit $EXIT_INTERRUPTED
+		fi
 		echo
 
 		if [[ -z "$input_file" ]]; then
 			log::warn "Input file is required. Please try again."
 			continue
+		fi
+
+		# Check for exit commands
+		if [[ "$input_file" == "exit" || "$input_file" == "quit" || "$input_file" == "q" ]]; then
+			log::info "Exiting interactive mode..."
+			exit $EXIT_SUCCESS
 		fi
 
 		# Validate input file
@@ -1108,7 +1129,11 @@ interactive_mode() {
 		# Check file extension
 		if [[ ! "$input_file" =~ \.(md|markdown)$ ]]; then
 			log::warn "File does not have .md or .markdown extension: $input_file"
-			read -p "Continue anyway? (y/N): " -n 1 -r
+			if ! read -p "Continue anyway? (y/N): " -n 1 -r; then
+				echo "" # Add newline after ^C
+				log::info "Exiting interactive mode..."
+				exit $EXIT_INTERRUPTED
+			fi
 			echo
 			if [[ ! $REPLY =~ ^[Yy]$ ]]; then
 				input_file=""
@@ -1119,8 +1144,18 @@ interactive_mode() {
 
 	# Set default output file
 	local default_output="${input_file%.*}.pdf"
-	read -p "Enter output PDF file path (default: $default_output): " -r output_file
+	if ! read -p "Enter output PDF file path (default: $default_output, or 'exit' to quit): " -r output_file; then
+		echo "" # Add newline after ^C
+		log::info "Exiting interactive mode..."
+		exit $EXIT_INTERRUPTED
+	fi
 	echo
+
+	# Check for exit commands
+	if [[ "$output_file" == "exit" || "$output_file" == "quit" || "$output_file" == "q" ]]; then
+		log::info "Exiting interactive mode..."
+		exit $EXIT_SUCCESS
+	fi
 
 	if [[ -z "$output_file" ]]; then
 		output_file="$default_output"
@@ -1129,7 +1164,11 @@ interactive_mode() {
 	# Check if output file exists
 	if [[ -f "$output_file" ]]; then
 		log::warn "Output file already exists: $output_file"
-		read -p "Overwrite it? (y/N): " -n 1 -r
+		if ! read -p "Overwrite it? (y/N): " -n 1 -r; then
+			echo "" # Add newline after ^C
+			log::info "Exiting interactive mode..."
+			exit $EXIT_INTERRUPTED
+		fi
 		echo
 		if [[ $REPLY =~ ^[Yy]$ ]]; then
 			force=true
@@ -1179,8 +1218,18 @@ interactive_mode() {
 	log::info "Selected engine: $engine"
 
 	# Optional: prompt for custom CSS
-	read -p "Enter custom CSS file path (optional, press Enter to skip): " -r css_file
+	if ! read -p "Enter custom CSS file path (optional, press Enter to skip, or 'exit' to quit): " -r css_file; then
+		echo "" # Add newline after ^C
+		log::info "Exiting interactive mode..."
+		exit $EXIT_INTERRUPTED
+	fi
 	echo
+
+	# Check for exit commands
+	if [[ "$css_file" == "exit" || "$css_file" == "quit" || "$css_file" == "q" ]]; then
+		log::info "Exiting interactive mode..."
+		exit $EXIT_SUCCESS
+	fi
 
 	if [[ -n "$css_file" ]]; then
 		if ! validate_css_file "$css_file"; then
@@ -1199,7 +1248,11 @@ interactive_mode() {
 	fi
 	log::info ""
 
-	read -p "Proceed with conversion? (Y/n): " -n 1 -r
+	if ! read -p "Proceed with conversion? (Y/n): " -n 1 -r; then
+		echo "" # Add newline after ^C
+		log::info "Exiting interactive mode..."
+		exit $EXIT_INTERRUPTED
+	fi
 	echo
 
 	if [[ $REPLY =~ ^[Nn]$ ]]; then
