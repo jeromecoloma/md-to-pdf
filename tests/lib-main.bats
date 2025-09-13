@@ -9,9 +9,10 @@ load bats-assert/load
 
 @test "get_version: returns VERSION file content" {
     # Test reading the VERSION file
+    expected_version=$(cat "${PROJECT_ROOT}/VERSION" | tr -d '\n')
     run get_version
     assert_success
-    assert_output "0.1.0"
+    assert_output "$expected_version"
 }
 
 @test "get_version: returns 'unknown' when VERSION file missing" {
@@ -27,15 +28,17 @@ load bats-assert/load
 }
 
 @test "parse_common_args: handles --version flag" {
+    expected_version=$(cat "${PROJECT_ROOT}/VERSION" | tr -d '\n')
     run parse_common_args "test-script" --version
     assert_success
-    assert_output "test-script 0.1.0"
+    assert_output "test-script $expected_version"
 }
 
 @test "parse_common_args: handles -v flag" {
+    expected_version=$(cat "${PROJECT_ROOT}/VERSION" | tr -d '\n')
     run parse_common_args "test-script" -v
     assert_success
-    assert_output "test-script 0.1.0"
+    assert_output "test-script $expected_version"
 }
 
 @test "parse_common_args: handles --help flag" {

@@ -71,17 +71,19 @@ load bats-assert/load
 }
 
 @test "hello-world: version flag" {
+    expected_version=$(cat "${PROJECT_ROOT}/VERSION" | tr -d '\n')
     run_script "hello-world" --version
     assert_success
     assert_output --partial "hello-world"
-    assert_output --partial "0.1.0"
+    assert_output --partial "$expected_version"
 }
 
 @test "hello-world: short version flag" {
+    expected_version=$(cat "${PROJECT_ROOT}/VERSION" | tr -d '\n')
     run_script "hello-world" -v
     assert_success
     assert_output --partial "hello-world"
-    assert_output --partial "0.1.0"
+    assert_output --partial "$expected_version"
 }
 
 @test "hello-world: unknown option error" {

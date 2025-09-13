@@ -29,7 +29,8 @@ load bats-assert/load
         fi
     "
     assert_success
-    assert_output --partial "Version: 0.1.0"
+    expected_version=$(cat "${PROJECT_ROOT}/VERSION" | tr -d '\n')
+    assert_output --partial "Version: $expected_version"
     assert_output --partial "All functions available"
     assert_output --partial "INFO:"
     assert_output --partial "Integration test running"
@@ -92,7 +93,8 @@ load bats-assert/load
         parse_common_args 'integration-test' --version
     "
     assert_success
-    assert_output "integration-test 0.1.0"
+    expected_version=$(cat "${PROJECT_ROOT}/VERSION" | tr -d '\n')
+    assert_output "integration-test $expected_version"
     
     # Test help parsing
     run bash -c "
@@ -226,7 +228,8 @@ EOF
     "
     assert_success
     assert_output --partial "Starting application"
-    assert_output --partial "Running version 0.1.0"
+    expected_version=$(cat "${PROJECT_ROOT}/VERSION" | tr -d '\n')
+    assert_output --partial "Running version $expected_version"
     assert_output --partial "Task completed successfully"
     assert_output --partial "Non-critical warning occurred"
     assert_output --partial "Workflow completed"

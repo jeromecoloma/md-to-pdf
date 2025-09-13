@@ -108,17 +108,19 @@ teardown() {
 }
 
 @test "md-to-pdf: version flag" {
+	expected_version=$(cat "${PROJECT_ROOT}/VERSION" | tr -d '\n')
 	run_script "md-to-pdf" --version
 	assert_success
 	assert_output --partial "md-to-pdf"
-	assert_output --partial "0.1.0"
+	assert_output --partial "$expected_version"
 }
 
 @test "md-to-pdf: short version flag" {
+	expected_version=$(cat "${PROJECT_ROOT}/VERSION" | tr -d '\n')
 	run_script "md-to-pdf" -v
 	assert_success
 	assert_output --partial "md-to-pdf"
-	assert_output --partial "0.1.0"
+	assert_output --partial "$expected_version"
 }
 
 @test "md-to-pdf: quiet mode" {
