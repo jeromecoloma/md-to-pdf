@@ -1,7 +1,19 @@
-/* Modern Theme - Contemporary, stylish design */
+/* Modern Theme - Contemporary, stylish design with enhanced readability */
+
+/* Import system emoji fonts for better rendering */
+@font-face {
+    font-family: 'Emoji';
+    src: local('Apple Color Emoji'), local('Segoe UI Emoji'), local('Noto Color Emoji'),
+         local('Android Emoji'), local('EmojiSymbols'), local('Symbola');
+}
+
+@page {
+    margin: 0.75in;
+    size: A4;
+}
 
 body {
-    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif;
     font-size: 14px;
     line-height: 1.7;
     color: #2c3e50;
@@ -96,36 +108,32 @@ em, i {
 }
 
 code {
-    font-family: "Fira Code", "Monaco", "Menlo", "Consolas", monospace;
+    font-family: "Monaco", "Menlo", "Consolas", "Courier New", monospace;
     font-size: 13px;
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    background: #f8f9fa;
     border: 1px solid #dee2e6;
     border-radius: 6px;
     padding: 3px 8px;
     color: #c0392b;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
 pre {
-    font-family: "Fira Code", "Monaco", "Menlo", "Consolas", monospace;
+    font-family: "Monaco", "Menlo", "Consolas", "Courier New", monospace;
     font-size: 13px;
-    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
-    color: #ecf0f1;
+    background: #f8f9fa;
+    color: #2c3e50;
     border-radius: 8px;
     padding: 20px;
     margin: 1.5em 0;
-    overflow: auto;
     line-height: 1.5;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    border: 1px solid #34495e;
+    border: 1px solid #dee2e6;
 }
 
 pre code {
-    background-color: transparent;
-    border: none;
-    padding: 0;
-    color: inherit;
-    box-shadow: none;
+    background-color: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    color: #2c3e50 !important;
 }
 
 blockquote {
@@ -165,9 +173,7 @@ table {
     width: 100%;
     margin: 2em 0;
     font-size: 14px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     border-radius: 8px;
-    overflow: hidden;
 }
 
 table th, table td {
@@ -177,7 +183,7 @@ table th, table td {
 }
 
 table th {
-    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+    background: #3498db;
     color: white;
     font-weight: 600;
     text-transform: uppercase;
@@ -207,12 +213,6 @@ img {
     height: auto;
     margin: 2em 0;
     border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    transition: transform 0.3s ease;
-}
-
-img:hover {
-    transform: scale(1.02);
 }
 
 /* Custom classes */
@@ -238,4 +238,191 @@ img:hover {
     padding: 1em 1.5em;
     margin: 1.5em 0;
     border-radius: 0 8px 8px 0;
+}
+
+/* Enhanced code block styling for pandoc syntax highlighting - WeasyPrint compatible */
+div.sourceCode {
+    background: transparent;
+    border-radius: 8px;
+    margin: 1.5em 0;
+}
+
+.sourceCode pre {
+    background: #f8f9fa !important;
+    color: #2c3e50 !important;
+    border: 1px solid #dee2e6 !important;
+    margin: 0 !important;
+    padding: 20px !important;
+    border-radius: 8px;
+}
+
+.sourceCode pre code {
+    background-color: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    color: inherit !important;
+}
+
+/* Syntax highlighting colors for better contrast on light background */
+.sourceCode .kw { color: #3498db; font-weight: bold; } /* Keywords */
+.sourceCode .dt { color: #e74c3c; } /* Data types */
+.sourceCode .dv { color: #27ae60; } /* Decimal values */
+.sourceCode .bn { color: #27ae60; } /* Base N integers */
+.sourceCode .fl { color: #27ae60; } /* Floats */
+.sourceCode .ch { color: #e67e22; } /* Characters */
+.sourceCode .st { color: #e67e22; } /* Strings */
+.sourceCode .co { color: #95a5a6; font-style: italic; } /* Comments */
+.sourceCode .ot { color: #9b59b6; } /* Other tokens */
+.sourceCode .al { color: #e74c3c; font-weight: bold; } /* Alerts */
+.sourceCode .fu { color: #8e44ad; } /* Functions */
+.sourceCode .er { color: #e74c3c; font-weight: bold; } /* Errors */
+.sourceCode .wa { color: #f39c12; font-weight: bold; } /* Warnings */
+.sourceCode .cn { color: #27ae60; } /* Constants */
+.sourceCode .sc { color: #e67e22; } /* Special characters */
+.sourceCode .vs { color: #e67e22; } /* Verbatim strings */
+.sourceCode .ss { color: #e67e22; } /* Special strings */
+.sourceCode .im { color: #9b59b6; } /* Imports */
+.sourceCode .va { color: #34495e; } /* Variables */
+.sourceCode .cf { color: #3498db; font-weight: bold; } /* Control flow */
+.sourceCode .op { color: #34495e; } /* Operators */
+.sourceCode .bu { color: #8e44ad; } /* Built-ins */
+.sourceCode .ex { color: #8e44ad; } /* Extensions */
+.sourceCode .pp { color: #9b59b6; } /* Preprocessor */
+.sourceCode .at { color: #f39c12; } /* Attributes */
+.sourceCode .do { color: #95a5a6; font-style: italic; } /* Documentation */
+.sourceCode .an { color: #95a5a6; font-style: italic; } /* Annotations */
+.sourceCode .cv { color: #95a5a6; font-style: italic; } /* Comments */
+.sourceCode .in { color: #95a5a6; font-style: italic; } /* Information */
+
+/* Ensure all code elements have proper readability */
+code.sourceCode {
+    background-color: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    color: #2c3e50 !important;
+}
+
+/* Force readable colors for any missed elements */
+.sourceCode span {
+    color: #2c3e50;
+}
+
+.sourceCode span[class] {
+    /* Let the specific classes above override */
+}
+
+/* Enhanced emoji support - more conservative approach */
+.emoji,
+span[class*="emoji"],
+[data-emoji] {
+    font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+    font-size: 1.1em;
+    vertical-align: -0.05em;
+}
+
+/* Remove the global emoji setting that was causing font issues */
+
+/* Task lists */
+.task-list-item {
+    list-style-type: none;
+}
+
+.task-list-item input {
+    margin: 0 0.2em 0.25em -1.6em;
+    vertical-align: middle;
+}
+
+/* Better spacing for task lists */
+ul.task-list {
+    padding-left: 1.5em;
+}
+
+ul.task-list li {
+    margin-bottom: 0.5em;
+}
+
+/* Ensure high contrast for all text elements */
+.sourceCode,
+pre,
+code {
+    color: #2c3e50 !important;
+}
+
+/* Override any inherited colors that might cause readability issues */
+div.sourceCode *,
+pre *,
+code * {
+    color: inherit;
+}
+
+/* Specific fixes for syntax highlighting spans */
+.sourceCode span:not([class]) {
+    color: #2c3e50 !important;
+}
+
+/* Prevent empty elements from showing backgrounds */
+.sourceCode:empty,
+.sourceCode pre:empty,
+.sourceCode code:empty {
+    display: none;
+}
+
+/* Hide empty code blocks */
+div.sourceCode:empty {
+    margin: 0;
+    height: 0;
+    overflow: hidden;
+}
+
+/* Ensure minimal height for empty pre elements */
+pre:empty {
+    display: none;
+}
+
+/* Simpler fix: remove backgrounds from ALL spans in code blocks */
+.sourceCode span {
+    background: none !important;
+    background-color: transparent !important;
+}
+
+/* Keep only the syntax highlighting colors we defined earlier */
+.sourceCode .kw,
+.sourceCode .dt,
+.sourceCode .dv,
+.sourceCode .bn,
+.sourceCode .fl,
+.sourceCode .ch,
+.sourceCode .st,
+.sourceCode .co,
+.sourceCode .ot,
+.sourceCode .al,
+.sourceCode .fu,
+.sourceCode .er,
+.sourceCode .wa,
+.sourceCode .cn,
+.sourceCode .sc,
+.sourceCode .vs,
+.sourceCode .ss,
+.sourceCode .im,
+.sourceCode .va,
+.sourceCode .cf,
+.sourceCode .op,
+.sourceCode .bu,
+.sourceCode .ex,
+.sourceCode .pp,
+.sourceCode .at,
+.sourceCode .do,
+.sourceCode .an,
+.sourceCode .cv,
+.sourceCode .in {
+    background: transparent !important;
+}
+
+/* Hide line number anchors but keep the text flow normal */
+.sourceCode a[aria-hidden="true"] {
+    visibility: hidden;
+    width: 0;
+    height: 0;
+    margin: 0;
+    padding: 0;
 }

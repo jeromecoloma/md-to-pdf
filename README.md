@@ -28,10 +28,12 @@ curl -fsSL https://raw.githubusercontent.com/jeromecoloma/md-to-pdf/main/install
 ## 📋 Features
 
 - **🎨 Professional PDF Output**: Clean, themed PDFs using pandoc with built-in styles
+- **😀 Enhanced Emoji Support**: Full emoji rendering with system font integration
 - **⏳ Interactive Mode**: Guided prompts for input/output paths and theme selection
 - **🔧 Direct Mode**: Command-line arguments for automated workflows
-- **📦 Multiple Themes**: GitHub, Academic, Clean, and Modern styles
+- **📦 Multiple Themes**: GitHub, Academic, Clean, and Modern styles with authentic styling
 - **🔍 Preview Mode**: Show conversion plan without executing
+- **⚙️ WeasyPrint Optimization**: Themes optimized for reliable PDF rendering
 - **🛡️ Error Handling**: Comprehensive validation and helpful error messages
 - **📝 Progress Indicators**: Visual feedback during conversion operations
 - **🤖 Shell Starter Framework**: Built on robust bash scripting foundation
@@ -81,15 +83,17 @@ md-to-pdf --preview document.md
 | `--css <file>`, `-c <file>` | Use custom CSS file for styling | `md-to-pdf --css custom.css doc.md` |
 | `--quiet`, `-q` | Suppress verbose output | `md-to-pdf --quiet doc.md` |
 | `--force`, `-f` | Overwrite existing files without prompting | `md-to-pdf --force doc.md` |
+| `--engine <name>`, `-e <name>` | Use specific PDF engine (weasyprint, xelatex) | `md-to-pdf --engine weasyprint doc.md` |
+| `--list-engines` | List all available PDF engines | `md-to-pdf --list-engines` |
 
 ### Available Themes
 
-md-to-pdf includes four professionally designed themes:
+md-to-pdf includes four professionally designed themes with enhanced emoji support:
 
-- **GitHub** (default): Clean, familiar styling matching GitHub's markdown rendering
+- **GitHub** (default): Clean, familiar styling matching GitHub's markdown rendering with full emoji support and authentic GitHub code block styling
 - **Academic**: Formal academic paper formatting with Times New Roman and structured layout
 - **Clean**: Minimal, readable design with Helvetica Neue typography
-- **Modern**: Contemporary styling with gradients, shadows, and modern typography
+- **Modern**: Contemporary styling optimized for WeasyPrint with clean gradients and modern typography
 
 ### Theme Examples
 
@@ -101,10 +105,43 @@ View example PDFs for each theme in `tests/output/`:
 Generate your own examples:
 ```bash
 # Create theme comparison PDFs
-echo "# Sample Document\n\nThis is a test." > sample.md
+echo "# Sample Document 🚀\n\nThis is a test with emojis! ✨\n\n\`\`\`bash\necho \"Hello World\"\n\`\`\`" > sample.md
 md-to-pdf --theme academic sample.md academic_example.pdf
 md-to-pdf --theme clean sample.md clean_example.pdf
 md-to-pdf --theme modern sample.md modern_example.pdf
+md-to-pdf --theme github sample.md github_example.pdf
+```
+
+### Theme Enhancements
+
+**Recent improvements include:**
+
+- **GitHub Theme**: Authentic GitHub markdown styling with proper code block rendering, enhanced emoji support, and clean typography matching GitHub's web interface
+- **Modern Theme**: WeasyPrint-optimized styling that eliminates rendering artifacts while maintaining contemporary design elements
+- **Enhanced Emoji Rendering**: All themes now include comprehensive emoji font support with proper fallbacks for cross-platform compatibility
+- **Code Block Improvements**: Clean syntax highlighting without visual artifacts, proper spacing, and authentic styling for each theme
+
+### PDF Engines
+
+md-to-pdf supports multiple PDF generation engines with different capabilities:
+
+- **WeasyPrint** (default): Enhanced CSS rendering with full emoji support, modern web standards, and optimized theme compatibility
+- **XeLaTeX**: LaTeX-based generation optimized for complex mathematical content and academic documents
+
+### Engine Selection
+
+```bash
+# Auto-select best engine (default: WeasyPrint)
+md-to-pdf document.md
+
+# Force WeasyPrint engine (recommended for most users)
+md-to-pdf --engine weasyprint document.md
+
+# Force XeLaTeX engine (for complex math/academic content)
+md-to-pdf --engine xelatex document.md
+
+# List available engines
+md-to-pdf --list-engines
 ```
 
 ### Advanced Usage Examples
@@ -127,6 +164,12 @@ md-to-pdf --force --theme clean document.md
 
 # Combine multiple options
 md-to-pdf --theme academic --css custom.css --preview document.md report.pdf
+
+# Use XeLaTeX engine for academic content
+md-to-pdf --engine xelatex --theme academic thesis.md
+
+# Force WeasyPrint with custom CSS
+md-to-pdf --engine weasyprint --css styles.css document.md
 ```
 
 ## 📂 Project Structure

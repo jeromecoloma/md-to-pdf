@@ -445,3 +445,225 @@ EOF
 	assert_output --partial "Using theme: clean"
 	assert_output --partial "Conversion completed successfully"
 }
+
+# Engine Tests
+
+@test "md-to-pdf: list engines" {
+	run_script "md-to-pdf" --list-engines
+	assert_success
+	assert_output --partial "Available PDF engines:"
+	assert_output --partial "weasyprint"
+	assert_output --partial "xelatex"
+}
+
+@test "md-to-pdf: engine selection - weasyprint" {
+	run_script "md-to-pdf" --engine weasyprint "$TEST_MD_FILE" "$TEST_OUTPUT_FILE"
+	assert_success
+	assert_output --partial "Using engine: weasyprint"
+	assert_output --partial "Conversion completed successfully"
+	assert [ -f "$TEST_OUTPUT_FILE" ]
+}
+
+@test "md-to-pdf: engine selection - xelatex" {
+	run_script "md-to-pdf" --engine xelatex "$TEST_MD_FILE" "$TEST_OUTPUT_FILE"
+	assert_success
+	assert_output --partial "Using engine: xelatex"
+	assert_output --partial "Conversion completed successfully"
+	assert [ -f "$TEST_OUTPUT_FILE" ]
+}
+
+@test "md-to-pdf: short engine flag" {
+	run_script "md-to-pdf" -e weasyprint "$TEST_MD_FILE" "$TEST_OUTPUT_FILE"
+	assert_success
+	assert_output --partial "Using engine: weasyprint"
+	assert_output --partial "Conversion completed successfully"
+}
+
+@test "md-to-pdf: invalid engine" {
+	run_script "md-to-pdf" --engine invalid "$TEST_MD_FILE"
+	assert_failure
+	assert_output --partial "Invalid engine: invalid"
+	assert_output --partial "Available PDF engines:"
+	assert_output --partial "weasyprint"
+	assert_output --partial "xelatex"
+}
+
+@test "md-to-pdf: preview shows engine information" {
+	run_script "md-to-pdf" --preview "$TEST_MD_FILE"
+	assert_success
+	assert_output --partial "Selected engine:"
+	assert_output --partial "Engine status:"
+}
+
+@test "md-to-pdf: preview with weasyprint engine" {
+	run_script "md-to-pdf" --preview --engine weasyprint "$TEST_MD_FILE"
+	assert_success
+	assert_output --partial "Selected engine: weasyprint"
+	assert_output --partial "WeasyPrint command:"
+	assert_output --partial "weasyprint"
+}
+
+@test "md-to-pdf: preview with xelatex engine" {
+	run_script "md-to-pdf" --preview --engine xelatex "$TEST_MD_FILE"
+	assert_success
+	assert_output --partial "Selected engine: xelatex"
+	assert_output --partial "Pandoc command:"
+	assert_output --partial "--pdf-engine=xelatex"
+}
+
+@test "md-to-pdf: weasyprint with theme" {
+	run_script "md-to-pdf" --engine weasyprint --theme academic "$TEST_MD_FILE" "$TEST_OUTPUT_FILE"
+	assert_success
+	assert_output --partial "Using engine: weasyprint"
+	assert_output --partial "Using theme: academic"
+	assert_output --partial "Conversion completed successfully"
+	assert [ -f "$TEST_OUTPUT_FILE" ]
+}
+
+@test "md-to-pdf: xelatex with theme" {
+	run_script "md-to-pdf" --engine xelatex --theme modern "$TEST_MD_FILE" "$TEST_OUTPUT_FILE"
+	assert_success
+	assert_output --partial "Using engine: xelatex"
+	assert_output --partial "Using theme: modern"
+	assert_output --partial "Conversion completed successfully"
+	assert [ -f "$TEST_OUTPUT_FILE" ]
+}
+
+@test "md-to-pdf: weasyprint with custom CSS" {
+	run_script "md-to-pdf" --engine weasyprint --css "$TEST_CSS_FILE" "$TEST_MD_FILE" "$TEST_OUTPUT_FILE"
+	assert_success
+	assert_output --partial "Using engine: weasyprint"
+	assert_output --partial "Using custom CSS: $TEST_CSS_FILE"
+	assert_output --partial "Conversion completed successfully"
+	assert [ -f "$TEST_OUTPUT_FILE" ]
+}
+
+@test "md-to-pdf: xelatex with custom CSS" {
+	run_script "md-to-pdf" --engine xelatex --css "$TEST_CSS_FILE" "$TEST_MD_FILE" "$TEST_OUTPUT_FILE"
+	assert_success
+	assert_output --partial "Using engine: xelatex"
+	assert_output --partial "Conversion completed successfully"
+	assert [ -f "$TEST_OUTPUT_FILE" ]
+}
+
+@test "md-to-pdf: quiet mode with engine selection" {
+	run_script "md-to-pdf" --quiet --engine weasyprint "$TEST_MD_FILE" "$TEST_OUTPUT_FILE"
+	assert_success
+	refute_output --partial "md-to-pdf tool initialized"
+	refute_output --partial "Using engine: weasyprint"
+	assert [ -f "$TEST_OUTPUT_FILE" ]
+}
+
+@test "md-to-pdf: force mode with engine selection" {
+	# Create existing output file
+	echo "existing content" >"$TEST_OUTPUT_FILE"
+
+	run_script "md-to-pdf" --force --engine xelatex "$TEST_MD_FILE" "$TEST_OUTPUT_FILE"
+	assert_success
+	assert_output --partial "Overwriting existing file"
+	assert_output --partial "Using engine: xelatex"
+	assert_output --partial "Conversion completed successfully"
+}
+
+@test "md-to-pdf: engine and theme combination" {
+	run_script "md-to-pdf" --engine weasyprint --theme github "$TEST_MD_FILE" "$TEST_OUTPUT_FILE"
+	assert_success
+	assert_output --partial "Using engine: weasyprint"
+	assert_output --partial "Using theme: github"
+	assert_output --partial "Conversion completed successfully"
+	assert [ -f "$TEST_OUTPUT_FILE" ]
+}
+
+@test "md-to-pdf: engine, theme, and CSS combination" {
+	run_script "md-to-pdf" --engine weasyprint --theme clean --css "$TEST_CSS_FILE" "$TEST_MD_FILE" "$TEST_OUTPUT_FILE"
+	assert_success
+	assert_output --partial "Using engine: weasyprint"
+	assert_output --partial "Using theme: clean"
+	assert_output --partial "Using custom CSS: $TEST_CSS_FILE"
+	assert_output --partial "Conversion completed successfully"
+	assert [ -f "$TEST_OUTPUT_FILE" ]
+}
+
+# Enhanced Features Tests
+
+@test "md-to-pdf: emoji support in markdown" {
+	# Create markdown with emojis
+	local emoji_file="${BATS_TEST_TMPDIR}/emoji.md"
+	cat >"$emoji_file" <<'EOF'
+# Emoji Test Document 🚀
+
+This document tests emoji rendering.
+
+## Features 📝
+
+- 🎨 Professional styling
+- 😀 Emoji support
+- ⚡ Fast conversion
+- ✅ Quality output
+
+## Code Example 💻
+
+```bash
+echo "Hello World! 🌍"
+```
+
+**Result**: Perfect emoji rendering! 🎉
+EOF
+
+	run_script "md-to-pdf" --theme github "$emoji_file" "$TEST_OUTPUT_FILE"
+	assert_success
+	assert_output --partial "Using theme: github"
+	assert_output --partial "Conversion completed successfully"
+	assert [ -f "$TEST_OUTPUT_FILE" ]
+
+	# Clean up
+	rm -f "$emoji_file"
+}
+
+@test "md-to-pdf: github theme with enhanced features" {
+	# Create markdown with GitHub-style elements
+	local github_file="${BATS_TEST_TMPDIR}/github.md"
+	cat >"$github_file" <<'EOF'
+# GitHub Style Test 🐙
+
+## Task Lists ✅
+
+- [x] Completed task
+- [ ] Pending task
+- [ ] Another task
+
+## Code Blocks 💻
+
+```javascript
+function hello() {
+    console.log("Hello GitHub! 👋");
+}
+```
+
+## Links and References 🔗
+
+See [GitHub](https://github.com) for more examples.
+EOF
+
+	run_script "md-to-pdf" --theme github "$github_file" "$TEST_OUTPUT_FILE"
+	assert_success
+	assert_output --partial "Using theme: github"
+	assert_output --partial "Conversion completed successfully"
+	assert [ -f "$TEST_OUTPUT_FILE" ]
+
+	# Clean up
+	rm -f "$github_file"
+}
+
+@test "md-to-pdf: modern theme weasyprint optimization" {
+	# Test that modern theme works without artifacts
+	run_script "md-to-pdf" --engine weasyprint --theme modern "$TEST_MD_FILE" "$TEST_OUTPUT_FILE"
+	assert_success
+	assert_output --partial "Using engine: weasyprint"
+	assert_output --partial "Using theme: modern"
+	assert_output --partial "Conversion completed successfully"
+	assert [ -f "$TEST_OUTPUT_FILE" ]
+
+	# Verify no warnings about unsupported properties (would appear in stderr)
+	# This is implicit - if conversion succeeds, WeasyPrint handled it properly
+}

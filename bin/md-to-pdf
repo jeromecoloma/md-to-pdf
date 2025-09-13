@@ -28,6 +28,10 @@ OUTPUT_FILE=""
 readonly AVAILABLE_THEMES=("github" "academic" "clean" "modern")
 readonly THEMES_DIR="${SHELL_STARTER_ROOT}/lib/themes"
 
+# Available PDF engines
+readonly AVAILABLE_ENGINES=("weasyprint" "xelatex")
+readonly DEFAULT_ENGINE="weasyprint"
+
 # Cleanup function for interrupted operations
 cleanup() {
 	local exit_code=$?
@@ -94,21 +98,31 @@ OPTIONS:
     -l, --list-themes  List available themes and exit
     -p, --preview      Show conversion preview without creating PDF
     -c, --css FILE     Use custom CSS file for styling
+    -e, --engine ENGINE Use specified PDF engine (default: auto-select)
+    --list-engines     List available PDF engines and exit
+
+ENGINES:
+    weasyprint         Enhanced CSS rendering with full emoji support and theme optimization (preferred)
+    xelatex           LaTeX-based PDF generation for complex math content (fallback)
 
 THEMES:
-    github             GitHub-style formatting (default)
-    academic           Academic paper formatting
-    clean              Clean, minimal formatting
-    modern             Modern, professional formatting
+    github             Authentic GitHub-style markdown rendering with emoji support (default)
+    academic           Formal academic paper formatting with structured layout
+    clean              Clean, minimal design with readable typography
+    modern             Contemporary WeasyPrint-optimized styling with clean gradients
 
 EXAMPLES:
     $(basename "$0")                           # Interactive mode
     $(basename "$0") document.md               # Convert to document.pdf
     $(basename "$0") document.md report.pdf    # Convert to report.pdf
-    $(basename "$0") --theme academic doc.md   # Use academic theme
+    $(basename "$0") --theme github doc.md     # Use GitHub theme with emoji support
+    $(basename "$0") --theme modern doc.md     # Use WeasyPrint-optimized modern theme
     $(basename "$0") --css custom.css doc.md   # Use custom CSS
     $(basename "$0") --preview document.md     # Preview conversion
     $(basename "$0") --list-themes             # Show available themes
+    $(basename "$0") --list-engines           # Show available PDF engines
+    $(basename "$0") --engine weasyprint doc.md # Force WeasyPrint engine (recommended)
+    $(basename "$0") --engine xelatex doc.md   # Force XeLaTeX engine
     $(basename "$0") --force document.md       # Overwrite existing document.pdf
     $(basename "$0") --help                    # Show this help
 EOF
@@ -139,6 +153,236 @@ check_dependencies() {
 	fi
 
 	return 0
+}
+
+check_weasyprint() {
+	if command -v weasyprint >/dev/null 2>&1; then
+		return 0
+	fi
+	return 1
+}
+
+get_weasyprint_version() {
+	if check_weasyprint; then
+		weasyprint --version 2>/dev/null | grep -o '[0-9][0-9.]*' | head -1
+	else
+		echo "not installed"
+	fi
+}
+
+prompt_weasyprint_installation() {
+	log::info "WeasyPrint is not installed but provides enhanced PDF rendering with CSS support."
+	log::info "Would you like to install WeasyPrint automatically? (recommended)"
+	log::info ""
+	log::info "WeasyPrint benefits:"
+	log::info "  - Better CSS-based styling (especially GitHub theme)"
+	log::info "  - Improved emoji and Unicode support"
+	log::info "  - Modern web-style layout rendering"
+	log::info ""
+	read -r -p "Install WeasyPrint now? [Y/n]: " response
+	case $response in
+	[nN][oO] | [nN])
+		log::info "Skipping WeasyPrint installation. Using XeLaTeX fallback."
+		return 1
+		;;
+	*)
+		return 0
+		;;
+	esac
+}
+
+install_weasyprint() {
+	log::info "Installing WeasyPrint (this may take a few minutes)..."
+
+	# Detect system and use appropriate package manager
+	local install_success=false
+
+	if command -v brew >/dev/null 2>&1; then
+		log::info "Using Homebrew to install WeasyPrint..."
+		if brew install weasyprint 2>/tmp/weasyprint_install.log; then
+			log::success "WeasyPrint installed successfully via Homebrew"
+			install_success=true
+		else
+			log::error "Homebrew installation failed"
+			if [[ -s /tmp/weasyprint_install.log ]]; then
+				log::error "Installation error details:"
+				cat /tmp/weasyprint_install.log >&2
+			fi
+		fi
+	elif command -v pip3 >/dev/null 2>&1; then
+		log::info "Using pip3 to install WeasyPrint..."
+		# Try with system dependencies first
+		if pip3 install weasyprint 2>/tmp/weasyprint_install.log; then
+			log::success "WeasyPrint installed successfully via pip3"
+			install_success=true
+		else
+			log::error "pip3 installation failed"
+			if [[ -s /tmp/weasyprint_install.log ]]; then
+				log::error "Installation error details:"
+				cat /tmp/weasyprint_install.log >&2
+
+				# Check for common pip installation issues
+				if grep -q "No module named" /tmp/weasyprint_install.log 2>/dev/null; then
+					log::info "This might be a dependency issue. Try installing system packages first:"
+					if command -v apt-get >/dev/null 2>&1; then
+						log::info "  sudo apt-get install python3-dev python3-pip python3-setuptools python3-wheel"
+					elif command -v yum >/dev/null 2>&1; then
+						log::info "  sudo yum install python3-devel python3-pip python3-setuptools python3-wheel"
+					fi
+				fi
+			fi
+		fi
+	elif command -v apt-get >/dev/null 2>&1; then
+		log::info "Using apt-get to install WeasyPrint..."
+		if sudo apt-get update 2>/tmp/weasyprint_install.log && sudo apt-get install -y python3-weasyprint 2>>/tmp/weasyprint_install.log; then
+			log::success "WeasyPrint installed successfully via apt-get"
+			install_success=true
+		else
+			log::error "apt-get installation failed"
+			if [[ -s /tmp/weasyprint_install.log ]]; then
+				log::error "Installation error details:"
+				cat /tmp/weasyprint_install.log >&2
+			fi
+		fi
+	elif command -v yum >/dev/null 2>&1; then
+		log::info "Using yum to install WeasyPrint..."
+		if sudo yum install -y python3-weasyprint 2>/tmp/weasyprint_install.log; then
+			log::success "WeasyPrint installed successfully via yum"
+			install_success=true
+		else
+			log::error "yum installation failed"
+			if [[ -s /tmp/weasyprint_install.log ]]; then
+				log::error "Installation error details:"
+				cat /tmp/weasyprint_install.log >&2
+			fi
+		fi
+	else
+		log::error "No supported package manager found (brew, pip3, apt-get, or yum)"
+	fi
+
+	# Verify installation if it reported success
+	if [[ "$install_success" == "true" ]]; then
+		if check_weasyprint; then
+			log::info "WeasyPrint installation verified successfully"
+			return 0
+		else
+			log::error "Installation completed but WeasyPrint is not working properly"
+			install_success=false
+		fi
+	fi
+
+	# Installation failed - provide comprehensive manual installation guidance
+	if [[ "$install_success" == "false" ]]; then
+		log::error "Automatic installation failed. Please install WeasyPrint manually:"
+		log::info ""
+		log::info "📦 Method 1 - pip3 (recommended for most users):"
+		log::info "  pip3 install weasyprint"
+		log::info ""
+		log::info "📦 Method 2 - System package manager:"
+		if command -v brew >/dev/null 2>&1; then
+			log::info "  macOS: brew install weasyprint"
+		elif command -v apt-get >/dev/null 2>&1; then
+			log::info "  Ubuntu/Debian: sudo apt-get install python3-weasyprint"
+		elif command -v yum >/dev/null 2>&1; then
+			log::info "  CentOS/RHEL: sudo yum install python3-weasyprint"
+		fi
+		log::info ""
+		log::info "📦 Method 3 - From source (if other methods fail):"
+		log::info "  pip3 install --upgrade pip setuptools wheel"
+		log::info "  pip3 install weasyprint"
+		log::info ""
+		log::info "🔧 System dependencies (may be required):"
+		if command -v apt-get >/dev/null 2>&1; then
+			log::info "  Ubuntu/Debian: sudo apt-get install build-essential python3-dev python3-pip python3-setuptools"
+		elif command -v yum >/dev/null 2>&1; then
+			log::info "  CentOS/RHEL: sudo yum groupinstall 'Development Tools' && sudo yum install python3-devel"
+		fi
+		log::info ""
+		log::info "📖 For more help, visit: https://doc.courtbouillon.org/weasyprint/stable/first_steps.html"
+		log::info ""
+		log::info "After manual installation, run this tool again to use WeasyPrint."
+	fi
+
+	return 1
+}
+
+select_engine() {
+	local preferred_engine="$1"
+
+	# If user specified an engine, validate and use it
+	if [[ -n "$preferred_engine" ]]; then
+		if validate_engine "$preferred_engine"; then
+			echo "$preferred_engine"
+			return 0
+		else
+			log::error "Invalid engine: $preferred_engine"
+			list_engines
+			return 1
+		fi
+	fi
+
+	# Auto-select best available engine (WeasyPrint first)
+	for engine in "${AVAILABLE_ENGINES[@]}"; do
+		if engine_available "$engine"; then
+			echo "$engine"
+			return 0
+		fi
+	done
+
+	log::error "No PDF engines available"
+	return 1
+}
+
+validate_engine() {
+	local engine="$1"
+
+	# Check if engine is in available list
+	for available_engine in "${AVAILABLE_ENGINES[@]}"; do
+		if [[ "$engine" == "$available_engine" ]]; then
+			return 0
+		fi
+	done
+
+	return 1
+}
+
+engine_available() {
+	local engine="$1"
+
+	case "$engine" in
+	"weasyprint")
+		check_weasyprint
+		;;
+	"xelatex")
+		command -v xelatex >/dev/null 2>&1
+		;;
+	*)
+		return 1
+		;;
+	esac
+}
+
+list_engines() {
+	log::info "Available PDF engines:"
+	for engine in "${AVAILABLE_ENGINES[@]}"; do
+		local status="available"
+		if ! engine_available "$engine"; then
+			status="not installed"
+		fi
+
+		case "$engine" in
+		"weasyprint")
+			local version=$(get_weasyprint_version)
+			log::info "  - $engine ($status) - Enhanced CSS rendering, emoji support"
+			if [[ "$version" != "not installed" ]]; then
+				log::info "    Version: $version"
+			fi
+			;;
+		"xelatex")
+			log::info "  - $engine ($status) - LaTeX-based PDF generation (fallback)"
+			;;
+		esac
+	done
 }
 
 validate_file_permissions() {
@@ -345,6 +589,7 @@ show_preview() {
 	local output_file="$2"
 	local theme="$3"
 	local css_file="$4"
+	local engine="$5"
 
 	log::info "=== CONVERSION PREVIEW ==="
 	log::info "Input file: $input_file"
@@ -363,14 +608,34 @@ show_preview() {
 
 	log::info "Output file: $output_file"
 	log::info "Selected theme: $theme"
+	log::info "Selected engine: $engine"
 
-	# Show theme template information
-	local theme_tex="${THEMES_DIR}/${theme}.tex"
-	if [[ -f "$theme_tex" ]]; then
-		log::info "Theme template: $theme_tex (found)"
+	# Show engine status
+	if engine_available "$engine"; then
+		log::info "Engine status: $engine (available)"
 	else
-		log::info "Theme template: $theme_tex (not found - will use default)"
+		log::info "Engine status: $engine (not available)"
 	fi
+
+	# Show engine-specific template information
+	case "$engine" in
+	"weasyprint")
+		local theme_css="${THEMES_DIR}/${theme}.css"
+		if [[ -f "$theme_css" ]]; then
+			log::info "Theme CSS: $theme_css (found)"
+		else
+			log::info "Theme CSS: $theme_css (not found - will use default)"
+		fi
+		;;
+	"xelatex")
+		local theme_tex="${THEMES_DIR}/${theme}.tex"
+		if [[ -f "$theme_tex" ]]; then
+			log::info "Theme template: $theme_tex (found)"
+		else
+			log::info "Theme template: $theme_tex (not found - will use default)"
+		fi
+		;;
+	esac
 
 	# Show CSS information if specified
 	if [[ -n "$css_file" ]]; then
@@ -381,16 +646,33 @@ show_preview() {
 		fi
 	fi
 
-	# Show pandoc command that would be executed
-	local pandoc_cmd="pandoc \"$input_file\" -o \"$output_file\" --pdf-engine=xelatex"
-	if [[ -f "$theme_tex" ]]; then
-		pandoc_cmd="$pandoc_cmd --template \"$theme_tex\""
-	fi
-	if [[ -n "$css_file" ]]; then
-		pandoc_cmd="$pandoc_cmd --css \"$css_file\""
-	fi
-
-	log::info "Pandoc command: $pandoc_cmd"
+	# Show conversion commands that would be executed
+	case "$engine" in
+	"weasyprint")
+		local temp_html="/tmp/md-to-pdf-preview.html"
+		local pandoc_cmd="pandoc \"$input_file\" -o \"$temp_html\" -t html --standalone --metadata title=\"\" --from markdown+emoji+task_lists+strikeout+superscript+subscript"
+		local theme_css="${THEMES_DIR}/${theme}.css"
+		if [[ -f "$theme_css" ]]; then
+			pandoc_cmd="$pandoc_cmd --css \"$theme_css\""
+		fi
+		if [[ -n "$css_file" ]]; then
+			pandoc_cmd="$pandoc_cmd --css \"$css_file\""
+		fi
+		log::info "Pandoc HTML command: $pandoc_cmd"
+		log::info "WeasyPrint command: weasyprint \"$temp_html\" \"$output_file\""
+		;;
+	"xelatex")
+		local pandoc_cmd="pandoc \"$input_file\" -o \"$output_file\" --pdf-engine=xelatex"
+		local theme_tex="${THEMES_DIR}/${theme}.tex"
+		if [[ -f "$theme_tex" ]]; then
+			pandoc_cmd="$pandoc_cmd --template \"$theme_tex\""
+		fi
+		log::info "Pandoc command: $pandoc_cmd"
+		if [[ -n "$css_file" ]]; then
+			log::info "Note: Custom CSS is not directly supported with XeLaTeX engine"
+		fi
+		;;
+	esac
 	log::info ""
 	log::info "To proceed with conversion, remove the --preview flag"
 	log::info "To change theme, use --theme <theme_name>"
@@ -403,34 +685,216 @@ convert_markdown_to_pdf() {
 	local quiet="$3"
 	local theme="$4"
 	local css_file="$5"
+	local engine="$6"
 
 	if [[ "$quiet" == "false" ]]; then
 		log::info "Starting markdown to PDF conversion..."
 		log::info "Using theme: $theme"
-		spinner::start "Converting $input_file to PDF with $theme theme"
+		log::info "Using engine: $engine"
+		spinner::start "Converting $input_file to PDF with $theme theme using $engine"
 	fi
 
 	# Track temporary files for cleanup
 	TEMP_FILES+=("/tmp/pandoc_error.log")
 
-	# Build pandoc command with theme support
-	local pandoc_cmd="pandoc \"$input_file\" -o \"$output_file\" --pdf-engine=xelatex"
+	# Engine-specific conversion with enhanced error handling
+	case "$engine" in
+	"weasyprint")
+		if ! convert_with_weasyprint "$input_file" "$output_file" "$theme" "$css_file" "$quiet"; then
+			local weasyprint_exit=$?
 
-	# Add theme template if theme file exists
-	local theme_tex="${THEMES_DIR}/${theme}.tex"
+			# If WeasyPrint failed and we're in non-interactive mode, offer fallback
+			if [[ "$quiet" == "false" ]]; then
+				spinner::stop
+				log::warn "WeasyPrint conversion failed, but XeLaTeX is available as fallback."
 
-	if [[ -f "$theme_tex" ]]; then
-		pandoc_cmd="$pandoc_cmd --template \"$theme_tex\""
-	else
-		log::warn "Theme template not found: $theme_tex - using default pandoc template"
+				# Only offer fallback if XeLaTeX is available
+				if engine_available "xelatex"; then
+					log::info "Would you like to retry with XeLaTeX engine?"
+					read -p "Retry with XeLaTeX? [Y/n]: " -n 1 -r
+					echo
+					if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+						log::info "Retrying with XeLaTeX engine..."
+						spinner::start "Converting $input_file to PDF with $theme theme using xelatex"
+						if convert_with_xelatex "$input_file" "$output_file" "$theme" "$css_file" "$quiet"; then
+							log::success "Conversion succeeded with XeLaTeX fallback!"
+							return $EXIT_SUCCESS
+						else
+							log::error "XeLaTeX fallback also failed."
+							return $EXIT_CONVERSION_FAILED
+						fi
+					fi
+				else
+					log::error "XeLaTeX is also not available. Please install LaTeX distribution."
+					log::info "macOS: brew install mactex"
+					log::info "Ubuntu: sudo apt-get install texlive-xetex"
+				fi
+			fi
+
+			return $weasyprint_exit
+		fi
+		;;
+	"xelatex")
+		convert_with_xelatex "$input_file" "$output_file" "$theme" "$css_file" "$quiet"
+		;;
+	*)
+		if [[ "$quiet" == "false" ]]; then
+			spinner::stop
+		fi
+		log::error "Unsupported engine: $engine"
+		return $EXIT_CONVERSION_FAILED
+		;;
+	esac
+}
+
+convert_with_weasyprint() {
+	local input_file="$1"
+	local output_file="$2"
+	local theme="$3"
+	local css_file="$4"
+	local quiet="$5"
+
+	# Create temporary HTML file
+	local temp_html="/tmp/md-to-pdf-$$.html"
+	TEMP_FILES+=("$temp_html")
+
+	# Build pandoc command for HTML output with enhanced emoji and GitHub support
+	local pandoc_cmd="pandoc \"$input_file\" -o \"$temp_html\" -t html --standalone --metadata title=\"\" --from markdown+emoji+task_lists+strikeout+superscript+subscript"
+
+	# Add CSS theme
+	local theme_css="${THEMES_DIR}/${theme}.css"
+	if [[ -f "$theme_css" ]]; then
+		pandoc_cmd="$pandoc_cmd --css \"$theme_css\""
 	fi
 
-	# Add custom CSS if specified (primarily for HTML output, but included for completeness)
+	# Add custom CSS if specified
 	if [[ -n "$css_file" ]]; then
 		pandoc_cmd="$pandoc_cmd --css \"$css_file\""
 		if [[ "$quiet" == "false" ]]; then
 			log::info "Using custom CSS: $css_file"
 		fi
+	fi
+
+	# Convert markdown to HTML
+	if ! eval "$pandoc_cmd" 2>/tmp/pandoc_error.log; then
+		local exit_code=$?
+		if [[ "$quiet" == "false" ]]; then
+			spinner::stop
+		fi
+		log::error "Pandoc HTML conversion failed (exit code: $exit_code)"
+
+		# Provide specific guidance for pandoc errors
+		if [[ -s /tmp/pandoc_error.log ]]; then
+			log::error "Pandoc error details:"
+			cat /tmp/pandoc_error.log >&2
+		fi
+
+		log::error "This error occurred during HTML generation for WeasyPrint."
+		log::error "Try using XeLaTeX engine instead: --engine xelatex"
+		return $EXIT_CONVERSION_FAILED
+	fi
+
+	# Convert HTML to PDF with WeasyPrint
+	if weasyprint "$temp_html" "$output_file" 2>/tmp/weasyprint_error.log; then
+		if [[ "$quiet" == "false" ]]; then
+			spinner::stop
+			log::success "Conversion completed successfully"
+			log::info "Output saved to: $output_file"
+		fi
+		return $EXIT_SUCCESS
+	else
+		local exit_code=$?
+		if [[ "$quiet" == "false" ]]; then
+			spinner::stop
+		fi
+		log::error "WeasyPrint conversion failed (exit code: $exit_code)"
+
+		# Analyze WeasyPrint error for specific guidance
+		local error_message=""
+		if [[ -s /tmp/weasyprint_error.log ]]; then
+			error_message=$(cat /tmp/weasyprint_error.log)
+			log::error "WeasyPrint error details:"
+			echo "$error_message" >&2
+		fi
+
+		# Provide specific error handling and recovery options
+		case $exit_code in
+		127)
+			# Command not found
+			log::error "WeasyPrint command not found. This is unexpected since we checked availability."
+			log::error "Please reinstall WeasyPrint or use XeLaTeX engine: --engine xelatex"
+			;;
+		1)
+			# General error - check for common issues
+			if echo "$error_message" | grep -qi "gtk\|glib\|cairo\|pango"; then
+				log::error "WeasyPrint dependency issue detected (GTK/Cairo/Pango)."
+				log::error "This usually requires system-level dependencies."
+				log::info "Try reinstalling WeasyPrint with system dependencies:"
+				log::info "  pip3 install --force-reinstall weasyprint"
+				log::info "Or use XeLaTeX engine: --engine xelatex"
+			elif echo "$error_message" | grep -qi "css\|stylesheet"; then
+				log::error "CSS parsing error detected."
+				log::error "Check your custom CSS file or try without CSS: remove --css option"
+				log::info "Or use XeLaTeX engine: --engine xelatex"
+			else
+				log::error "WeasyPrint encountered an unknown error."
+				log::error "This might be due to HTML complexity or system configuration."
+				log::info "Try using XeLaTeX engine as fallback: --engine xelatex"
+			fi
+			;;
+		*)
+			# Other exit codes
+			log::error "WeasyPrint failed with exit code $exit_code."
+			log::info "Try using XeLaTeX engine as fallback: --engine xelatex"
+			;;
+		esac
+
+		# Offer automatic fallback to XeLaTeX
+		if [[ "$quiet" == "false" ]]; then
+			log::info ""
+			log::info "Would you like to automatically retry with XeLaTeX engine? (recommended)"
+			read -p "Retry with XeLaTeX? [Y/n]: " -n 1 -r
+			echo
+			if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+				log::info "Retrying conversion with XeLaTeX engine..."
+				# Call XeLaTeX conversion with same parameters
+				if convert_with_xelatex "$input_file" "$output_file" "$theme" "$css_file" "$quiet"; then
+					log::success "Conversion succeeded with XeLaTeX fallback!"
+					return $EXIT_SUCCESS
+				else
+					log::error "XeLaTeX fallback also failed."
+					return $EXIT_CONVERSION_FAILED
+				fi
+			fi
+		fi
+
+		return $EXIT_CONVERSION_FAILED
+	fi
+}
+
+convert_with_xelatex() {
+	local input_file="$1"
+	local output_file="$2"
+	local theme="$3"
+	local css_file="$4"
+	local quiet="$5"
+
+	# Build pandoc command with XeLaTeX
+	local pandoc_cmd="pandoc \"$input_file\" -o \"$output_file\" --pdf-engine=xelatex"
+
+	# Add theme template if theme file exists
+	local theme_tex="${THEMES_DIR}/${theme}.tex"
+	if [[ -f "$theme_tex" ]]; then
+		pandoc_cmd="$pandoc_cmd --template \"$theme_tex\""
+	else
+		if [[ "$quiet" == "false" ]]; then
+			log::warn "Theme template not found: $theme_tex - using default pandoc template"
+		fi
+	fi
+
+	# Add custom CSS if specified (for reference, though XeLaTeX doesn't use CSS directly)
+	if [[ -n "$css_file" && "$quiet" == "false" ]]; then
+		log::info "Note: Custom CSS is not directly supported with XeLaTeX engine"
 	fi
 
 	# Execute pandoc command
@@ -446,7 +910,6 @@ convert_markdown_to_pdf() {
 		if [[ "$quiet" == "false" ]]; then
 			spinner::stop
 		fi
-
 		log::error "Pandoc conversion failed (exit code: $exit_code)"
 
 		# Check if error log has useful information
@@ -534,12 +997,85 @@ prompt_theme_selection() {
 	echo "$selected_theme"
 }
 
+prompt_engine_selection() {
+	local current_engine="$1"
+
+	log::info "Available PDF engines:"
+	local i=1
+	for engine in "${AVAILABLE_ENGINES[@]}"; do
+		local status="not available"
+		if engine_available "$engine"; then
+			status="available"
+		fi
+
+		local description=""
+		case "$engine" in
+		"weasyprint")
+			description=" - Enhanced CSS rendering, emoji support"
+			;;
+		"xelatex")
+			description=" - LaTeX-based PDF generation (fallback)"
+			;;
+		esac
+
+		if [[ "$engine" == "$current_engine" ]]; then
+			log::info "  $i. $engine ($status)$description (current default)"
+		else
+			log::info "  $i. $engine ($status)$description"
+		fi
+		((i++))
+	done
+
+	log::info ""
+	read -p "Select PDF engine (1-${#AVAILABLE_ENGINES[@]}, or press Enter for auto-selection): " -r engine_choice
+	echo
+
+	if [[ -z "$engine_choice" ]]; then
+		# Auto-select best available engine
+		local auto_engine
+		if auto_engine=$(select_engine ""); then
+			log::info "Auto-selected engine: $auto_engine"
+			echo "$auto_engine"
+			return 0
+		else
+			log::error "Auto-selection failed"
+			return 1
+		fi
+	fi
+
+	# Validate numeric input
+	if ! [[ "$engine_choice" =~ ^[0-9]+$ ]]; then
+		log::error "Invalid input: please enter a number between 1 and ${#AVAILABLE_ENGINES[@]}"
+		return 1
+	fi
+
+	# Check range
+	if [[ $engine_choice -lt 1 || $engine_choice -gt ${#AVAILABLE_ENGINES[@]} ]]; then
+		log::error "Invalid choice: please select a number between 1 and ${#AVAILABLE_ENGINES[@]}"
+		return 1
+	fi
+
+	# Get engine name (arrays are 0-indexed)
+	local selected_engine="${AVAILABLE_ENGINES[$((engine_choice - 1))]}"
+
+	# Validate that selected engine is available
+	if ! engine_available "$selected_engine"; then
+		log::error "Selected engine is not available: $selected_engine"
+		list_engines
+		return 1
+	fi
+
+	log::info "Selected engine: $selected_engine"
+	echo "$selected_engine"
+}
+
 interactive_mode() {
 	local input_file=""
 	local output_file=""
 	local theme="github"
 	local css_file=""
 	local force=false
+	local engine=""
 
 	# Initialize temporary files array for cleanup
 	TEMP_FILES=()
@@ -615,6 +1151,33 @@ interactive_mode() {
 
 	theme=$(echo "$selected_theme" | tr -d '\n\r')
 
+	# Prompt for engine selection
+	local selected_engine
+	selected_engine=$(prompt_engine_selection "$DEFAULT_ENGINE")
+	local engine_result=$?
+	if [[ $engine_result -ne 0 ]]; then
+		log::error "Engine selection failed"
+		return 1
+	fi
+	engine="$selected_engine"
+
+	# Handle WeasyPrint auto-installation if not available
+	if [[ "$engine" == "weasyprint" ]] && ! check_weasyprint; then
+		if prompt_weasyprint_installation; then
+			if install_weasyprint; then
+				log::info "WeasyPrint installed successfully, continuing with WeasyPrint engine"
+			else
+				log::warn "WeasyPrint installation failed, falling back to XeLaTeX"
+				engine="xelatex"
+			fi
+		else
+			log::info "Using XeLaTeX engine as fallback"
+			engine="xelatex"
+		fi
+	fi
+
+	log::info "Selected engine: $engine"
+
 	# Optional: prompt for custom CSS
 	read -p "Enter custom CSS file path (optional, press Enter to skip): " -r css_file
 	echo
@@ -671,7 +1234,7 @@ interactive_mode() {
 	# Perform the conversion
 	log::info "Starting conversion..."
 	local conversion_result
-	conversion_result=$(convert_markdown_to_pdf "$input_file" "$output_file" "false" "$theme" "$css_file")
+	conversion_result=$(convert_markdown_to_pdf "$input_file" "$output_file" "false" "$theme" "$css_file" "$engine")
 	local conversion_exit=$?
 
 	if [[ $conversion_exit -ne $EXIT_SUCCESS ]]; then
@@ -698,6 +1261,7 @@ main() {
 	local css_file=""
 	local input_file=""
 	local output_file=""
+	local engine=""
 
 	# Check dependencies first
 	if ! check_dependencies; then
@@ -740,6 +1304,19 @@ main() {
 			css_file="$2"
 			shift 2
 			;;
+		--engine | -e)
+			if [[ -z "$2" || "$2" =~ ^- ]]; then
+				log::error "Engine name is required after --engine/-e"
+				echo "Use --help for usage information."
+				exit 1
+			fi
+			engine="$2"
+			shift 2
+			;;
+		--list-engines)
+			list_engines
+			exit $EXIT_SUCCESS
+			;;
 		--help | -h | --version | -v)
 			parse_common_args "$(basename "$0")" "$@"
 			;;
@@ -768,6 +1345,53 @@ main() {
 		exit 1
 	fi
 
+	# Select and validate engine
+	local selected_engine
+	selected_engine=$(select_engine "$engine")
+	local engine_result=$?
+	if [[ $engine_result -ne 0 ]]; then
+		exit 1
+	fi
+	engine="$selected_engine"
+
+	# Handle WeasyPrint auto-installation if not available (critical since it's default)
+	if [[ "$engine" == "weasyprint" ]] && ! check_weasyprint; then
+		if [[ "$quiet" == "false" ]]; then
+			log::warn "WeasyPrint is not installed but is the preferred engine for best results."
+			if prompt_weasyprint_installation; then
+				log::info "Attempting to install WeasyPrint..."
+				if install_weasyprint; then
+					log::success "WeasyPrint installed successfully, continuing with WeasyPrint engine"
+				else
+					log::error "WeasyPrint installation failed."
+					log::warn "Falling back to XeLaTeX engine. Some features may be limited."
+					log::info "To use WeasyPrint later, try: pip3 install weasyprint"
+					engine="xelatex"
+				fi
+			else
+				log::info "Installation declined. Using XeLaTeX engine as fallback."
+				log::info "Note: XeLaTeX provides good results but may have limited emoji support."
+				engine="xelatex"
+			fi
+		else
+			# In quiet mode, attempt installation once, then fallback
+			log::info "Attempting quiet WeasyPrint installation..."
+			if install_weasyprint >/dev/null 2>&1; then
+				log::info "WeasyPrint installed successfully"
+			else
+				log::info "WeasyPrint installation failed, using XeLaTeX fallback"
+				engine="xelatex"
+			fi
+		fi
+	fi
+
+	# Final engine availability check
+	if ! engine_available "$engine"; then
+		log::error "Selected engine '$engine' is not available"
+		log::info "Please install the required dependencies or select a different engine"
+		exit $EXIT_DEPENDENCY_MISSING
+	fi
+
 	# Validate CSS file if specified
 	if ! validate_css_file "$css_file"; then
 		exit 1
@@ -792,7 +1416,7 @@ main() {
 		if [[ -z "$output_file" ]]; then
 			output_file="${input_file%.*}.pdf"
 		fi
-		show_preview "$input_file" "$output_file" "$theme" "$css_file"
+		show_preview "$input_file" "$output_file" "$theme" "$css_file" "$engine"
 		exit $EXIT_SUCCESS
 	fi
 
@@ -838,7 +1462,7 @@ main() {
 
 	# Perform the conversion
 	local conversion_result
-	conversion_result=$(convert_markdown_to_pdf "$input_file" "$output_file" "$quiet" "$theme" "$css_file")
+	conversion_result=$(convert_markdown_to_pdf "$input_file" "$output_file" "$quiet" "$theme" "$css_file" "$engine")
 	local conversion_exit=$?
 
 	if [[ $conversion_exit -ne $EXIT_SUCCESS ]]; then
