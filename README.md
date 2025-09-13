@@ -91,6 +91,22 @@ md-to-pdf includes four professionally designed themes:
 - **Clean**: Minimal, readable design with Helvetica Neue typography
 - **Modern**: Contemporary styling with gradients, shadows, and modern typography
 
+### Theme Examples
+
+View example PDFs for each theme in `tests/output/`:
+- `academic_final.pdf` - Academic theme example
+- `clean_final.pdf` - Clean theme example
+- `modern_final.pdf` - Modern theme example
+
+Generate your own examples:
+```bash
+# Create theme comparison PDFs
+echo "# Sample Document\n\nThis is a test." > sample.md
+md-to-pdf --theme academic sample.md academic_example.pdf
+md-to-pdf --theme clean sample.md clean_example.pdf
+md-to-pdf --theme modern sample.md modern_example.pdf
+```
+
 ### Advanced Usage Examples
 
 ```bash
@@ -120,6 +136,11 @@ md-to-pdf/
 ├── bin/md-to-pdf         # Main CLI script
 ├── lib/                  # Shell Starter framework utilities
 ├── tests/                # Test suite (Bats framework)
+│   ├── output/           # Test output files and theme examples
+│   │   ├── academic_final.pdf    # Academic theme example
+│   │   ├── clean_final.pdf       # Clean theme example
+│   │   └── modern_final.pdf      # Modern theme example
+│   └── *.bats            # Test files
 ├── docs/                 # Documentation and development guides
 ├── .github/workflows/    # CI/CD configuration
 ├── VERSION               # Version file
@@ -139,11 +160,16 @@ This tool is built on the [Shell Starter](https://github.com/jeromecoloma/shell-
 
 ```bash
 # Run all tests
-./tests/bats-core/bin/bats tests/*.bats
+./tests/run-tests.sh
 
 # Run specific test
-./tests/bats-core/bin/bats tests/md-to-pdf.bats
+./tests/run-tests.sh tests/md-to-pdf.bats
+
+# View test outputs (theme examples)
+ls tests/output/
 ```
+
+**Note**: Test outputs are organized in `tests/output/` directory. Temporary test files are automatically cleaned up after each test run.
 
 ### Code Quality
 

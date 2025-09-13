@@ -1,54 +1,203 @@
-\documentclass[12pt,a4paper]{article}
+\documentclass[11pt,a4paper]{article}
 
-% GitHub Theme - Clean, readable styling
-\usepackage[margin=1in]{geometry}
+% Essential packages
+\usepackage[margin=0.75in]{geometry}
 \usepackage{xcolor}
-\usepackage{listings}
 \usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{fancyvrb}
+\usepackage{listings}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{array}
 
-% GitHub-inspired colors
-\definecolor{github-blue}{HTML}{0366d6}
-\definecolor{github-gray}{HTML}{586069}
-\definecolor{github-light}{HTML}{f6f8fa}
+% Font and encoding
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
 
-% Code formatting
-\lstset{
-    basicstyle=\ttfamily\footnotesize,
-    backgroundcolor=\color{github-light},
-    frame=single,
-    breaklines=true
-}
+% GitHub color scheme
+\definecolor{gh-text}{HTML}{24292f}
+\definecolor{gh-bg}{HTML}{ffffff}
+\definecolor{gh-link}{HTML}{0969da}
+\definecolor{gh-border}{HTML}{d0d7de}
+\definecolor{gh-code-bg}{HTML}{f6f8fa}
+\definecolor{gh-code-border}{HTML}{d0d7de}
+\definecolor{gh-quote}{HTML}{656d76}
 
-% Link colors
+% Page setup
+\pagecolor{gh-bg}
+\color{gh-text}
+
+% Remove paragraph indentation and set spacing
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.8em}
+\renewcommand{\baselinestretch}{1.4}
+
+% Header styling to match GitHub
+\titleformat{\section}
+  {\LARGE\bfseries\color{gh-text}}
+  {}
+  {0em}
+  {}
+  [\vspace{0.3em}\textcolor{gh-border}{\rule{\textwidth}{1pt}}\vspace{0.5em}]
+
+\titleformat{\subsection}
+  {\Large\bfseries\color{gh-text}}
+  {}
+  {0em}
+  {}
+  [\vspace{0.2em}\textcolor{gh-border}{\rule{\textwidth}{0.5pt}}\vspace{0.3em}]
+
+\titleformat{\subsubsection}
+  {\large\bfseries\color{gh-text}}
+  {}
+  {0em}
+  {}
+
+\titleformat{\paragraph}
+  {\normalsize\bfseries\color{gh-text}}
+  {}
+  {0em}
+  {}
+
+% Adjust section spacing
+\titlespacing*{\section}{0pt}{1.5em}{0.8em}
+\titlespacing*{\subsection}{0pt}{1.2em}{0.6em}
+\titlespacing*{\subsubsection}{0pt}{1em}{0.5em}
+\titlespacing*{\paragraph}{0pt}{0.8em}{0.3em}
+
+% Hyperlink styling
 \hypersetup{
     colorlinks=true,
-    linkcolor=github-blue,
-    urlcolor=github-blue
+    linkcolor=gh-link,
+    urlcolor=gh-link,
+    citecolor=gh-link,
+    pdfborder={0 0 0}
 }
 
-% Pandoc compatibility
-\providecommand{\tightlist}{\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
-\usepackage{framed}
-\usepackage{fancyvrb}
-\definecolor{shadecolor}{gray}{0.95}
-\newenvironment{Shaded}{\begin{shaded}}{\end{shaded}}
-\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+% Code block styling
+\lstset{
+    basicstyle=\ttfamily\small\color{gh-text},
+    backgroundcolor=\color{gh-code-bg},
+    frame=single,
+    framerule=0.5pt,
+    rulecolor=\color{gh-code-border},
+    breaklines=true,
+    breakatwhitespace=true,
+    showstringspaces=false,
+    tabsize=4,
+    aboveskip=1em,
+    belowskip=1em,
+    xleftmargin=0.3em,
+    xrightmargin=0.3em,
+    numbers=none
+}
 
-% Title formatting
+% Inline code styling
+\let\oldtexttt\texttt
+\renewcommand{\texttt}[1]{%
+    \colorbox{gh-code-bg}{%
+        \color{gh-text}\ttfamily\footnotesize%
+        \,#1\,%
+    }%
+}
+
+% Simple quote styling
+\renewenvironment{quote}
+  {\list{}{\leftmargin=2em\rightmargin=0em}%
+   \item\relax\color{gh-quote}\itshape}
+  {\endlist}
+
+% List styling
+\setlist[itemize]{
+    leftmargin=1.5em,
+    itemsep=0.2em,
+    parsep=0pt,
+    topsep=0.4em
+}
+
+\setlist[enumerate]{
+    leftmargin=1.5em,
+    itemsep=0.2em,
+    parsep=0pt,
+    topsep=0.4em
+}
+
+% Table styling
+\renewcommand{\arraystretch}{1.2}
+
+% Pandoc table support
+\usepackage{calc}
+\newcolumntype{L}[1]{>{\raggedright\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
+\newcolumntype{C}[1]{>{\centering\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
+\newcolumntype{R}[1]{>{\raggedleft\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
+\providecommand{\real}{}
+\newcolumntype{P}[1]{>{\raggedright\arraybackslash}p{#1}}
+
+% Title page styling
 $if(title)$
-\title{$title$}
+\title{\huge\bfseries\color{gh-text}$title$}
 $endif$
 $if(author)$
-\author{$author$}
+\author{\Large\color{gh-text}$author$}
 $endif$
 $if(date)$
-\date{$date$}
+\date{\large\color{gh-text}$date$}
 $endif$
+
+% Pandoc compatibility
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}
+}
+
+% Syntax highlighting for pandoc
+\usepackage{framed}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+\definecolor{shadecolor}{HTML}{f6f8fa}
+\newenvironment{Shaded}{\begin{shaded}}{\end{shaded}}
+
+% Basic syntax highlighting commands
+\newcommand{\AlertTok}[1]{\textcolor[rgb]{0.68,0.00,0.00}{\textbf{#1}}}
+\newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.37,0.37,0.37}{\textit{#1}}}
+\newcommand{\AttributeTok}[1]{\textcolor[rgb]{0.40,0.45,0.13}{#1}}
+\newcommand{\BaseNTok}[1]{\textcolor[rgb]{0.68,0.00,0.00}{#1}}
+\newcommand{\BuiltInTok}[1]{\textcolor[rgb]{0.00,0.23,0.31}{#1}}
+\newcommand{\CharTok}[1]{\textcolor[rgb]{0.13,0.47,0.30}{#1}}
+\newcommand{\CommentTok}[1]{\textcolor[rgb]{0.37,0.37,0.37}{\textit{#1}}}
+\newcommand{\CommentVarTok}[1]{\textcolor[rgb]{0.37,0.37,0.37}{\textit{#1}}}
+\newcommand{\ConstantTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\ControlFlowTok}[1]{\textcolor[rgb]{0.00,0.23,0.31}{\textbf{#1}}}
+\newcommand{\DataTypeTok}[1]{\textcolor[rgb]{0.68,0.00,0.00}{#1}}
+\newcommand{\DecValTok}[1]{\textcolor[rgb]{0.68,0.00,0.00}{#1}}
+\newcommand{\DocumentationTok}[1]{\textcolor[rgb]{0.37,0.37,0.37}{\textit{#1}}}
+\newcommand{\ErrorTok}[1]{\textcolor[rgb]{0.68,0.00,0.00}{\textbf{#1}}}
+\newcommand{\ExtensionTok}[1]{\textcolor[rgb]{0.00,0.23,0.31}{#1}}
+\newcommand{\FloatTok}[1]{\textcolor[rgb]{0.68,0.00,0.00}{#1}}
+\newcommand{\FunctionTok}[1]{\textcolor[rgb]{0.28,0.35,0.67}{#1}}
+\newcommand{\ImportTok}[1]{\textcolor[rgb]{0.00,0.46,0.62}{#1}}
+\newcommand{\InformationTok}[1]{\textcolor[rgb]{0.37,0.37,0.37}{\textit{#1}}}
+\newcommand{\KeywordTok}[1]{\textcolor[rgb]{0.00,0.23,0.31}{\textbf{#1}}}
+\newcommand{\NormalTok}[1]{\textcolor[rgb]{0.00,0.23,0.31}{#1}}
+\newcommand{\OperatorTok}[1]{\textcolor[rgb]{0.37,0.37,0.37}{#1}}
+\newcommand{\OtherTok}[1]{\textcolor[rgb]{0.00,0.23,0.31}{#1}}
+\newcommand{\PreprocessorTok}[1]{\textcolor[rgb]{0.68,0.00,0.00}{#1}}
+\newcommand{\RegionMarkerTok}[1]{\textcolor[rgb]{0.00,0.23,0.31}{#1}}
+\newcommand{\SpecialCharTok}[1]{\textcolor[rgb]{0.37,0.37,0.37}{#1}}
+\newcommand{\SpecialStringTok}[1]{\textcolor[rgb]{0.13,0.47,0.30}{#1}}
+\newcommand{\StringTok}[1]{\textcolor[rgb]{0.13,0.47,0.30}{#1}}
+\newcommand{\VariableTok}[1]{\textcolor[rgb]{0.07,0.40,0.16}{#1}}
+\newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.13,0.47,0.30}{#1}}
+\newcommand{\WarningTok}[1]{\textcolor[rgb]{0.37,0.37,0.37}{\textit{#1}}}
 
 \begin{document}
 
 $if(title)$
 \maketitle
+\thispagestyle{empty}
+\vspace{2em}
 $endif$
 
 $body$

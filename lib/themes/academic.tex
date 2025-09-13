@@ -6,56 +6,142 @@
 \usepackage{listings}
 \usepackage{hyperref}
 \usepackage{setspace}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{calc}
+\usepackage{fvextra}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{mdframed}
+
+% Table handling
+\newcolumntype{L}[1]{>{\raggedright\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
+\newcolumntype{C}[1]{>{\centering\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
+\newcolumntype{R}[1]{>{\raggedleft\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
+\providecommand{\real}{}
+
+% Academic colors (define early)
+\definecolor{academic-text}{HTML}{000000}
+\definecolor{academic-bg}{HTML}{ffffff}
+\definecolor{academic-link}{HTML}{000080}
+\definecolor{academic-code-bg}{HTML}{f5f5f5}
+\definecolor{academic-border}{HTML}{cccccc}
+\definecolor{academic-header}{HTML}{000000}
+\definecolor{academic-gray}{HTML}{666666}
 
 % Font setup - Times New Roman for academic feel
-\usepackage{fontspec}
-\setmainfont{Times New Roman}
+\usepackage{times}
 
 % Line spacing
 \onehalfspacing
 
-% Academic colors
-\definecolor{academic-gray}{HTML}{666666}
+% Page setup
+\pagecolor{academic-bg}
+\color{academic-text}
 
-% Code formatting
+% Header styling (Academic-like)
+\titleformat{\section}{\Large\bfseries\color{academic-header}}{}{0em}{}[\color{academic-border}\titlerule]
+\titleformat{\subsection}{\large\bfseries\color{academic-header}}{}{0em}{}[\color{academic-border}\titlerule]
+\titleformat{\subsubsection}{\normalsize\bfseries\color{academic-header}}{}{0em}{}
+\titleformat{\paragraph}{\normalsize\bfseries\color{academic-header}}{}{0em}{}
+
+\titlespacing*{\section}{0pt}{24pt}{16pt}
+\titlespacing*{\subsection}{0pt}{24pt}{16pt}
+\titlespacing*{\subsubsection}{0pt}{24pt}{16pt}
+
+% Code formatting (Academic-like)
 \lstset{
-    basicstyle=\ttfamily\footnotesize,
-    backgroundcolor=\color{gray!10},
+    basicstyle=\ttfamily\footnotesize\color{academic-text},
+    backgroundcolor=\color{academic-code-bg},
     frame=single,
-    breaklines=true
+    breaklines=true,
+    numbers=none,
+    commentstyle=\color{academic-gray}\itshape,
+    keywordstyle=\color{academic-link}\bfseries,
+    stringstyle=\color{academic-link}
 }
 
 % Link colors
 \hypersetup{
     colorlinks=true,
-    linkcolor=black,
-    urlcolor=black
+    linkcolor=academic-link,
+    urlcolor=academic-link,
+    citecolor=academic-link
 }
+
+% Blockquotes (Academic-like)
+\newmdenv[
+    linewidth=4pt,
+    linecolor=academic-border,
+    backgroundcolor=academic-bg,
+    leftmargin=1em,
+    rightmargin=0em,
+    innertopmargin=0em,
+    innerbottommargin=0em,
+    skipabove=16pt,
+    skipbelow=16pt
+]{blockquoteenv}
+
+% Lists (Academic-like)
+\setlist[itemize]{leftmargin=2em, itemsep=0.25em}
+\setlist[enumerate]{leftmargin=2em, itemsep=0.25em}
 
 % Pandoc compatibility
 \providecommand{\tightlist}{\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
 \usepackage{framed}
 \usepackage{fancyvrb}
-\definecolor{shadecolor}{gray}{0.95}
+\definecolor{shadecolor}{HTML}{f5f5f5}
 \newenvironment{Shaded}{\begin{shaded}}{\end{shaded}}
-\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{breaklines,commandchars=\\\{\}}
+
+% Syntax highlighting commands (Academic colors)
+\providecommand{\ExtensionTok}[1]{\textcolor{academic-gray}{\textsl{#1}}}
+\providecommand{\AttributeTok}[1]{\textcolor{academic-link}{\textbf{#1}}}
+\providecommand{\NormalTok}[1]{\textcolor{academic-text}{#1}}
+\providecommand{\KeywordTok}[1]{\textcolor{academic-link}{\textbf{#1}}}
+\providecommand{\FunctionTok}[1]{\textcolor{academic-link}{#1}}
+\providecommand{\StringTok}[1]{\textcolor{academic-link}{#1}}
+\providecommand{\CommentTok}[1]{\textcolor{academic-gray}{\textit{#1}}}
+\providecommand{\VariableTok}[1]{\textcolor{academic-text}{#1}}
+\providecommand{\ControlFlowTok}[1]{\textcolor{academic-link}{\textbf{#1}}}
+\providecommand{\OperatorTok}[1]{\textcolor{academic-text}{#1}}
+\providecommand{\BuiltInTok}[1]{\textcolor{academic-link}{#1}}
+\providecommand{\DataTypeTok}[1]{\textcolor{academic-link}{#1}}
+\providecommand{\DecValTok}[1]{\textcolor{academic-text}{#1}}
+\providecommand{\BaseNTok}[1]{\textcolor{academic-text}{#1}}
+\providecommand{\FloatTok}[1]{\textcolor{academic-text}{#1}}
+\providecommand{\CharTok}[1]{\textcolor{academic-link}{#1}}
+\providecommand{\SpecialCharTok}[1]{\textcolor{academic-text}{#1}}
+\providecommand{\SpecialStringTok}[1]{\textcolor{academic-link}{#1}}
+\providecommand{\VerbatimStringTok}[1]{\textcolor{academic-link}{#1}}
+\providecommand{\ImportTok}[1]{\textcolor{academic-link}{#1}}
+\providecommand{\DocumentationTok}[1]{\textcolor{academic-gray}{\textit{#1}}}
+\providecommand{\AnnotationTok}[1]{\textcolor{academic-link}{#1}}
+\providecommand{\CommentVarTok}[1]{\textcolor{academic-gray}{\textit{#1}}}
+\providecommand{\OtherTok}[1]{\textcolor{academic-text}{#1}}
+\providecommand{\PreprocessorTok}[1]{\textcolor{academic-link}{\textbf{#1}}}
 
 % Title formatting
 $if(title)$
-\title{$title$}
+\title{\Large\bfseries\color{academic-header}$title$}
 $endif$
 $if(author)$
-\author{$author$}
+\author{\color{academic-text}$author$}
 $endif$
 $if(date)$
-\date{$date$}
+\date{\color{academic-text}$date$}
 $endif$
 
 \begin{document}
 
 $if(title)$
 \maketitle
+\vspace{24pt}
 $endif$
+
+% Set up the document body with academic styling
+\color{academic-text}
 
 $body$
 

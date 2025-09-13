@@ -40,14 +40,16 @@ cleanup() {
 	fi
 
 	# Clean up temporary files
-	for temp_file in "${TEMP_FILES[@]}"; do
-		if [[ -f "$temp_file" ]]; then
-			rm -f "$temp_file"
-			if [[ "$interrupted" == "true" ]]; then
-				log::info "Cleaned up temporary file: $temp_file"
+	if [[ -n "${TEMP_FILES+x}" ]] && declare -p TEMP_FILES 2>/dev/null | grep -q "declare -a"; then
+		for temp_file in "${TEMP_FILES[@]}"; do
+			if [[ -f "$temp_file" ]]; then
+				rm -f "$temp_file"
+				if [[ "$interrupted" == "true" ]]; then
+					log::info "Cleaned up temporary file: $temp_file"
+				fi
 			fi
-		fi
-	done
+		done
+	fi
 
 	# Clean up partial output file if interrupted
 	if [[ "$interrupted" == "true" && -n "$OUTPUT_FILE" && -f "$OUTPUT_FILE" ]]; then
@@ -382,7 +384,7 @@ show_preview() {
 	# Show pandoc command that would be executed
 	local pandoc_cmd="pandoc \"$input_file\" -o \"$output_file\" --pdf-engine=xelatex"
 	if [[ -f "$theme_tex" ]]; then
-		pandoc_cmd="$pandoc_cmd --template \"$theme_tex\" --no-highlight"
+		pandoc_cmd="$pandoc_cmd --template \"$theme_tex\""
 	fi
 	if [[ -n "$css_file" ]]; then
 		pandoc_cmd="$pandoc_cmd --css \"$css_file\""
@@ -418,7 +420,7 @@ convert_markdown_to_pdf() {
 	local theme_tex="${THEMES_DIR}/${theme}.tex"
 
 	if [[ -f "$theme_tex" ]]; then
-		pandoc_cmd="$pandoc_cmd --template \"$theme_tex\" --no-highlight"
+		pandoc_cmd="$pandoc_cmd --template \"$theme_tex\""
 	else
 		log::warn "Theme template not found: $theme_tex - using default pandoc template"
 	fi
@@ -539,6 +541,9 @@ interactive_mode() {
 	local css_file=""
 	local force=false
 
+	# Initialize temporary files array for cleanup
+	TEMP_FILES=()
+
 	log::info "=== INTERACTIVE MODE ==="
 	log::info "Welcome to md-to-pdf! Let's convert your markdown file to PDF."
 	log::info ""
@@ -608,7 +613,7 @@ interactive_mode() {
 		return 1
 	fi
 
-	theme="$selected_theme"
+	theme=$(echo "$selected_theme" | tr -d '\n\r')
 
 	# Optional: prompt for custom CSS
 	read -p "Enter custom CSS file path (optional, press Enter to skip): " -r css_file

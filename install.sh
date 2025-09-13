@@ -40,24 +40,24 @@ detect_shell_config() {
 	shell_name=$(basename "$SHELL")
 
 	case "$shell_name" in
-		zsh)
-			echo "$HOME/.zshrc"
-			;;
-		bash)
-			# Check for .bashrc first, then .bash_profile
-			if [[ -f "$HOME/.bashrc" ]]; then
-				echo "$HOME/.bashrc"
-			else
-				echo "$HOME/.bash_profile"
-			fi
-			;;
-		fish)
-			echo "$HOME/.config/fish/config.fish"
-			;;
-		*)
-			# Default to .bashrc for unknown shells
+	zsh)
+		echo "$HOME/.zshrc"
+		;;
+	bash)
+		# Check for .bashrc first, then .bash_profile
+		if [[ -f "$HOME/.bashrc" ]]; then
 			echo "$HOME/.bashrc"
-			;;
+		else
+			echo "$HOME/.bash_profile"
+		fi
+		;;
+	fish)
+		echo "$HOME/.config/fish/config.fish"
+		;;
+	*)
+		# Default to .bashrc for unknown shells
+		echo "$HOME/.bashrc"
+		;;
 	esac
 }
 

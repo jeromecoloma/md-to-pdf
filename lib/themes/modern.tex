@@ -6,6 +6,29 @@
 \usepackage{listings}
 \usepackage{hyperref}
 \usepackage{setspace}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{calc}
+\usepackage{fvextra}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{mdframed}
+
+% Table handling
+\newcolumntype{L}[1]{>{\raggedright\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
+\newcolumntype{C}[1]{>{\centering\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
+\newcolumntype{R}[1]{>{\raggedleft\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
+\providecommand{\real}{}
+
+% Modern color palette (define early)
+\definecolor{modern-text}{HTML}{2c3e50}
+\definecolor{modern-bg}{HTML}{ffffff}
+\definecolor{modern-blue}{HTML}{3498db}
+\definecolor{modern-green}{HTML}{2ecc71}
+\definecolor{modern-red}{HTML}{e74c3c}
+\definecolor{modern-code-bg}{HTML}{ecf0f1}
+\definecolor{modern-border}{HTML}{bdc3c7}
 
 % Font setup - Clean, modern fonts
 \usepackage{lmodern}
@@ -13,50 +36,112 @@
 % Line spacing
 \onehalfspacing
 
-% Modern color palette
-\definecolor{modern-blue}{HTML}{3498db}
-\definecolor{modern-green}{HTML}{2ecc71}
-\definecolor{modern-red}{HTML}{e74c3c}
+% Page setup
+\pagecolor{modern-bg}
+\color{modern-text}
 
-% Code formatting
+% Header styling (Modern-like with some flair)
+\titleformat{\section}{\Large\bfseries\color{modern-blue}}{}{0em}{}
+\titleformat{\subsection}{\large\bfseries\color{modern-green}}{}{0em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries\color{modern-text}}{}{0em}{}
+\titleformat{\paragraph}{\normalsize\bfseries\color{modern-text}}{}{0em}{}
+
+\titlespacing*{\section}{0pt}{24pt}{16pt}
+\titlespacing*{\subsection}{0pt}{24pt}{16pt}
+\titlespacing*{\subsubsection}{0pt}{24pt}{16pt}
+
+% Code formatting (Modern-like)
 \lstset{
-    basicstyle=\ttfamily\footnotesize,
-    backgroundcolor=\color{blue!5},
+    basicstyle=\ttfamily\footnotesize\color{modern-text},
+    backgroundcolor=\color{modern-code-bg},
     frame=none,
-    breaklines=true
+    breaklines=true,
+    numbers=none,
+    commentstyle=\color{modern-text!60}\itshape,
+    keywordstyle=\color{modern-blue}\bfseries,
+    stringstyle=\color{modern-green}
 }
 
 % Link colors
 \hypersetup{
     colorlinks=true,
     linkcolor=modern-blue,
-    urlcolor=modern-blue
+    urlcolor=modern-blue,
+    citecolor=modern-blue
 }
+
+% Blockquotes (Modern-like)
+\newmdenv[
+    linewidth=4pt,
+    linecolor=modern-border,
+    backgroundcolor=modern-bg,
+    leftmargin=1em,
+    rightmargin=0em,
+    innertopmargin=0em,
+    innerbottommargin=0em,
+    skipabove=16pt,
+    skipbelow=16pt
+]{blockquoteenv}
+
+% Lists (Modern-like)
+\setlist[itemize]{leftmargin=2em, itemsep=0.25em}
+\setlist[enumerate]{leftmargin=2em, itemsep=0.25em}
 
 % Pandoc compatibility
 \providecommand{\tightlist}{\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
 \usepackage{framed}
 \usepackage{fancyvrb}
-\definecolor{shadecolor}{gray}{0.95}
+\definecolor{shadecolor}{HTML}{ecf0f1}
 \newenvironment{Shaded}{\begin{shaded}}{\end{shaded}}
-\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{breaklines,commandchars=\\\{\}}
+
+% Syntax highlighting commands (Modern colors)
+\providecommand{\ExtensionTok}[1]{\textcolor{modern-blue}{\textsl{#1}}}
+\providecommand{\AttributeTok}[1]{\textcolor{modern-blue}{\textbf{#1}}}
+\providecommand{\NormalTok}[1]{\textcolor{modern-text}{#1}}
+\providecommand{\KeywordTok}[1]{\textcolor{modern-blue}{\textbf{#1}}}
+\providecommand{\FunctionTok}[1]{\textcolor{modern-green}{#1}}
+\providecommand{\StringTok}[1]{\textcolor{modern-green}{#1}}
+\providecommand{\CommentTok}[1]{\textcolor{modern-text!60}{\textit{#1}}}
+\providecommand{\VariableTok}[1]{\textcolor{modern-text}{#1}}
+\providecommand{\ControlFlowTok}[1]{\textcolor{modern-blue}{\textbf{#1}}}
+\providecommand{\OperatorTok}[1]{\textcolor{modern-text}{#1}}
+\providecommand{\BuiltInTok}[1]{\textcolor{modern-blue}{#1}}
+\providecommand{\DataTypeTok}[1]{\textcolor{modern-red}{#1}}
+\providecommand{\DecValTok}[1]{\textcolor{modern-text}{#1}}
+\providecommand{\BaseNTok}[1]{\textcolor{modern-text}{#1}}
+\providecommand{\FloatTok}[1]{\textcolor{modern-text}{#1}}
+\providecommand{\CharTok}[1]{\textcolor{modern-green}{#1}}
+\providecommand{\SpecialCharTok}[1]{\textcolor{modern-text}{#1}}
+\providecommand{\SpecialStringTok}[1]{\textcolor{modern-green}{#1}}
+\providecommand{\VerbatimStringTok}[1]{\textcolor{modern-green}{#1}}
+\providecommand{\ImportTok}[1]{\textcolor{modern-blue}{#1}}
+\providecommand{\DocumentationTok}[1]{\textcolor{modern-text!60}{\textit{#1}}}
+\providecommand{\AnnotationTok}[1]{\textcolor{modern-blue}{#1}}
+\providecommand{\CommentVarTok}[1]{\textcolor{modern-text!60}{\textit{#1}}}
+\providecommand{\OtherTok}[1]{\textcolor{modern-text}{#1}}
+\providecommand{\PreprocessorTok}[1]{\textcolor{modern-blue}{\textbf{#1}}}
 
 % Title formatting
 $if(title)$
-\title{\Huge\textbf{$title$}}
+\title{\Huge\textbf{\color{modern-blue}$title$}}
 $endif$
 $if(author)$
-\author{$author$}
+\author{\color{modern-text}$author$}
 $endif$
 $if(date)$
-\date{$date$}
+\date{\color{modern-text}$date$}
 $endif$
 
 \begin{document}
 
 $if(title)$
 \maketitle
+\vspace{24pt}
 $endif$
+
+% Set up the document body with modern styling
+\color{modern-text}
 
 $body$
 
