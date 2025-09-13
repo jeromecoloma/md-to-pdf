@@ -16,7 +16,18 @@ bash <(curl -fsSL https://raw.githubusercontent.com/jeromecoloma/md-to-pdf/main/
 
 **Custom Installation Path**: The installer supports `--prefix /custom/path` (default: `~/.config/md-to-pdf/bin`)
 
-**Uninstallation**: Built-in uninstaller with confirmation: `./uninstall.sh` or `./uninstall.sh -y`
+### Uninstallation
+
+**Method 1 (Recommended)**: Use built-in uninstall command:
+```bash
+md-to-pdf --uninstall
+```
+
+**Method 2**: Download standalone uninstaller:
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/jeromecoloma/md-to-pdf/main/uninstall.sh)
+# Or for automatic uninstall: bash <(curl -fsSL https://raw.githubusercontent.com/jeromecoloma/md-to-pdf/main/uninstall.sh) -y
+```
 
 ### Prerequisites
 
@@ -85,6 +96,7 @@ md-to-pdf --preview document.md
 | `--force`, `-f` | Overwrite existing files without prompting | `md-to-pdf --force doc.md` |
 | `--engine <name>`, `-e <name>` | Use specific PDF engine (weasyprint, xelatex) | `md-to-pdf --engine weasyprint doc.md` |
 | `--list-engines` | List all available PDF engines | `md-to-pdf --list-engines` |
+| `--uninstall` | Uninstall md-to-pdf and remove all files | `md-to-pdf --uninstall` |
 
 ### Available Themes
 

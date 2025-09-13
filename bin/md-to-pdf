@@ -102,6 +102,7 @@ OPTIONS:
     -c, --css FILE     Use custom CSS file for styling
     -e, --engine ENGINE Use specified PDF engine (default: auto-select)
     --list-engines     List available PDF engines and exit
+    --uninstall        Uninstall md-to-pdf and remove all installed files (downloads robust uninstaller)
 
 ENGINES:
     weasyprint         Enhanced CSS rendering with full emoji support and theme optimization (preferred)
@@ -126,8 +127,156 @@ EXAMPLES:
     $(basename "$0") --engine weasyprint doc.md # Force WeasyPrint engine (recommended)
     $(basename "$0") --engine xelatex doc.md   # Force XeLaTeX engine
     $(basename "$0") --force document.md       # Overwrite existing document.pdf
+    $(basename "$0") --uninstall               # Uninstall md-to-pdf (downloads latest uninstaller)
     $(basename "$0") --help                    # Show this help
 EOF
+}
+
+uninstall_md_to_pdf() {
+	# Built-in fallback uninstaller (simpler version of standalone uninstall.sh)
+	# Used when the robust standalone uninstaller cannot be downloaded
+	local manifest_dir="$HOME/.config/md-to-pdf"
+	local manifest_file="$manifest_dir/install-manifest.txt"
+
+	log::info "Starting md-to-pdf uninstallation (built-in uninstaller)..."
+
+	# Check if manifest exists
+	if [[ ! -f "$manifest_file" ]]; then
+		log::error "Installation manifest not found: $manifest_file"
+		log::error "This tool may not have been installed via the installer script."
+		log::info "To manually uninstall:"
+		log::info "1. Remove the md-to-pdf binary from your PATH"
+		log::info "2. Remove the ~/.config/md-to-pdf directory"
+		return 1
+	fi
+
+	log::info "Found installation manifest: $manifest_file"
+
+	# Show what will be removed
+	local files_to_remove=()
+	while IFS= read -r line; do
+		# Skip comments and empty lines
+		[[ -z "$line" || "$line" =~ ^# ]] && continue
+		if [[ -e "$line" ]]; then
+			files_to_remove+=("$line")
+		fi
+	done <"$manifest_file"
+
+	if [[ ${#files_to_remove[@]} -eq 0 ]]; then
+		log::warn "No files found to remove"
+	else
+		log::info "Files to be removed:"
+		for file in "${files_to_remove[@]}"; do
+			log::info "  - $file"
+		done
+	fi
+
+	# Get confirmation
+	echo
+	if ! read -p "Do you want to proceed with uninstallation? (y/N): " -n 1 -r; then
+		echo "" # Add newline after ^C
+		log::info "Uninstallation cancelled"
+		exit $EXIT_INTERRUPTED
+	fi
+	echo
+	if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+		log::info "Uninstallation cancelled"
+		return 0
+	fi
+
+	# Remove files
+	local removed_count=0
+	for file_path in "${files_to_remove[@]}"; do
+		if [[ -f "$file_path" ]]; then
+			if rm "$file_path"; then
+				log::info "Removed: $file_path"
+				((removed_count++))
+			else
+				log::error "Failed to remove: $file_path"
+			fi
+		elif [[ -d "$file_path" ]]; then
+			if rmdir "$file_path" 2>/dev/null; then
+				log::info "Removed directory: $file_path"
+				((removed_count++))
+			else
+				log::info "Directory not empty, skipping: $file_path"
+			fi
+		fi
+	done
+
+	# Get install prefix from manifest
+	local install_prefix=""
+	while IFS= read -r line; do
+		if [[ "$line" =~ ^#.*Install\ prefix:\ (.+)$ ]]; then
+			install_prefix="${BASH_REMATCH[1]}"
+			break
+		fi
+	done <"$manifest_file"
+
+	# Remove PATH entry from shell config if we found the prefix
+	if [[ -n "$install_prefix" ]]; then
+		local shell_config
+		case "$(basename "$SHELL")" in
+		zsh) shell_config="$HOME/.zshrc" ;;
+		bash)
+			if [[ -f "$HOME/.bashrc" ]]; then
+				shell_config="$HOME/.bashrc"
+			else
+				shell_config="$HOME/.bash_profile"
+			fi
+			;;
+		fish) shell_config="$HOME/.config/fish/config.fish" ;;
+		*) shell_config="$HOME/.bashrc" ;;
+		esac
+
+		if [[ -f "$shell_config" ]] && grep -q "export PATH.*$install_prefix" "$shell_config"; then
+			log::info "Removing PATH entry from $shell_config"
+			local temp_file
+			temp_file=$(mktemp)
+			local skip_next=false
+
+			while IFS= read -r line; do
+				if [[ "$skip_next" == "true" ]]; then
+					skip_next=false
+					continue
+				fi
+
+				if [[ "$line" == "# Added by md-to-pdf installer" ]]; then
+					skip_next=true
+					continue
+				fi
+
+				if [[ "$line" == "export PATH=\"$install_prefix:\$PATH\"" ]]; then
+					continue
+				fi
+
+				echo "$line" >>"$temp_file"
+			done <"$shell_config"
+
+			if mv "$temp_file" "$shell_config"; then
+				log::info "PATH entry removed from $shell_config"
+			else
+				log::error "Failed to update $shell_config"
+			fi
+		fi
+	fi
+
+	# Remove manifest and config directory
+	if rm "$manifest_file" 2>/dev/null; then
+		log::info "Removed manifest: $manifest_file"
+	fi
+
+	if rmdir "$manifest_dir" 2>/dev/null; then
+		log::info "Removed config directory: $manifest_dir"
+	fi
+
+	log::success "Uninstallation complete!"
+	log::info "Removed $removed_count files/directories"
+	if [[ -n "${shell_config:-}" ]]; then
+		log::info "Please run 'source $shell_config' or restart your shell for PATH changes to take effect"
+	fi
+
+	exit $EXIT_SUCCESS
 }
 
 check_dependencies() {
@@ -1332,7 +1481,7 @@ main() {
 			shift
 			;;
 		--theme | -t)
-			if [[ -z "$2" || "$2" =~ ^- ]]; then
+			if [[ $# -lt 2 || -z "${2:-}" || "${2:-}" =~ ^- ]]; then
 				log::error "Theme name is required after --theme/-t"
 				echo "Use --help for usage information."
 				exit 1
@@ -1349,7 +1498,7 @@ main() {
 			shift
 			;;
 		--css | -c)
-			if [[ -z "$2" || "$2" =~ ^- ]]; then
+			if [[ $# -lt 2 || -z "${2:-}" || "${2:-}" =~ ^- ]]; then
 				log::error "CSS file path is required after --css/-c"
 				echo "Use --help for usage information."
 				exit 1
@@ -1358,7 +1507,7 @@ main() {
 			shift 2
 			;;
 		--engine | -e)
-			if [[ -z "$2" || "$2" =~ ^- ]]; then
+			if [[ $# -lt 2 || -z "${2:-}" || "${2:-}" =~ ^- ]]; then
 				log::error "Engine name is required after --engine/-e"
 				echo "Use --help for usage information."
 				exit 1
@@ -1369,6 +1518,31 @@ main() {
 		--list-engines)
 			list_engines
 			exit $EXIT_SUCCESS
+			;;
+		--uninstall)
+			# Try to use the standalone uninstaller (more robust) first
+			if command -v curl >/dev/null 2>&1; then
+				log::info "Downloading standalone uninstaller for complete removal..."
+				local uninstaller_url="https://raw.githubusercontent.com/jeromecoloma/md-to-pdf/main/uninstall.sh"
+
+				# Test if we can reach the URL first
+				if curl -fsSL --connect-timeout 10 --max-time 30 "$uninstaller_url" >/dev/null 2>&1; then
+					if bash <(curl -fsSL --connect-timeout 10 --max-time 30 "$uninstaller_url") 2>/dev/null; then
+						log::success "Uninstallation completed using standalone uninstaller"
+						exit $EXIT_SUCCESS
+					else
+						log::warn "Standalone uninstaller execution failed, trying built-in fallback..."
+					fi
+				else
+					log::warn "Cannot download standalone uninstaller (network/URL issue), using built-in fallback..."
+				fi
+			else
+				log::info "curl not available, using built-in uninstaller..."
+			fi
+
+			# Fallback to built-in uninstaller
+			log::info "Using built-in uninstaller..."
+			uninstall_md_to_pdf
 			;;
 		--help | -h | --version | -v)
 			parse_common_args "$(basename "$0")" "$@"
