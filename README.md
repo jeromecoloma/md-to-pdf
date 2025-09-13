@@ -11,7 +11,7 @@ Built on the [Shell Starter](https://github.com/jeromecoloma/shell-starter) fram
 Install md-to-pdf using the built-in installer:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/jeromecoloma/md-to-pdf/main/install.sh | bash
+bash <(curl -fsSL https://raw.githubusercontent.com/jeromecoloma/md-to-pdf/main/install.sh)
 ```
 
 **Custom Installation Path**: The installer supports `--prefix /custom/path` (default: `~/.config/md-to-pdf/bin`)

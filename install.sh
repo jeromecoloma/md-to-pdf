@@ -109,7 +109,7 @@ OPTIONS:
 EXAMPLES:
     $0                           # Install to $DEFAULT_PREFIX and update PATH
     $0 --prefix /home/user/bin   # Install to custom location and update PATH
-    curl -fsSL https://raw.githubusercontent.com/jeromecoloma/md-to-pdf/main/install.sh | bash
+    bash <(curl -fsSL https://raw.githubusercontent.com/jeromecoloma/md-to-pdf/main/install.sh)
 
 SECURITY NOTE:
     This installer can be run via 'curl | bash' for convenience, but be aware

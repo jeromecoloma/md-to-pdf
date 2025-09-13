@@ -572,7 +572,7 @@ git commit -m "feat: add md-to-pdf CLI tool with theme support"
 git push -u origin main
 
 # 4. Your users can now install with:
-# curl -fsSL https://raw.githubusercontent.com/your-username/md-to-pdf-cli/main/install.sh | bash
+# bash <(curl -fsSL https://raw.githubusercontent.com/your-username/md-to-pdf-cli/main/install.sh)
 ```
 
 ---
