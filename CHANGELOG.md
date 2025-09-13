@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated installation command to use process substitution to resolve pipe buffering issues
 - Fixed argument parsing error when using --theme, --css, or --engine options without values
 - Fixed shell script formatting to comply with shfmt standards
+- Fixed installer message to reference correct uninstall command (--uninstall instead of ./uninstall.sh)
 
 ### Changed
 - Improved installer with automatic project download using git/curl/wget fallbacks

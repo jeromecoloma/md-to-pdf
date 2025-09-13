@@ -305,7 +305,7 @@ main() {
 	log_info "Install manifest saved to: $MANIFEST_FILE"
 	log_info "PATH updated in: $shell_config"
 	log_info "Please run 'source $shell_config' or restart your shell to use the installed scripts"
-	log_info "Use ./uninstall.sh to remove installed scripts"
+	log_info "Use 'md-to-pdf --uninstall' to remove installed scripts"
 }
 
 # Run main function if script is executed directly
