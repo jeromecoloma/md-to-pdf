@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.4] - 2025-09-14
+
+### Added
+- Built-in update functionality with `--update` option
+- Automatic version checking against GitHub releases
+- Interactive update confirmation with release notes display
+- Robust error handling for network issues and update failures
+- Automated GitHub release creation workflow via GitHub Actions
+- Complete GitHub releases for all historical versions (v0.1.0 through v0.2.3)
+
+### Fixed
+- Fixed infinite loop bug in `--update` command by adding proper exit statement
+- Added missing exit handling for update functionality
+
+### Changed
+- Updated documentation (README.md) to include `--update` feature and examples
+- Enhanced release automation with changelog extraction for release notes
+
 ## [0.2.3] - 2025-09-14
 
 ### Added
@@ -64,7 +82,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Basic theme support
 - Core installation scripts
 
-[0.2.3]: https://github.com/your-username/md-to-pdf/compare/v0.2.1...v0.2.3
-[0.2.1]: https://github.com/your-username/md-to-pdf/compare/v0.2.0...v0.2.1
-[0.2.0]: https://github.com/your-username/md-to-pdf/compare/v0.1.0...v0.2.0
-[0.1.0]: https://github.com/your-username/md-to-pdf/releases/tag/v0.1.0
+[0.2.4]: https://github.com/jeromecoloma/md-to-pdf/compare/v0.2.3...v0.2.4
+[0.2.3]: https://github.com/jeromecoloma/md-to-pdf/compare/v0.2.2...v0.2.3
+[0.2.2]: https://github.com/jeromecoloma/md-to-pdf/compare/v0.2.1...v0.2.2
+[0.2.1]: https://github.com/jeromecoloma/md-to-pdf/compare/v0.2.0...v0.2.1
+[0.2.0]: https://github.com/jeromecoloma/md-to-pdf/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/jeromecoloma/md-to-pdf/releases/tag/v0.1.0

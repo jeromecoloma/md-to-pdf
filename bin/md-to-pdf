@@ -102,6 +102,7 @@ OPTIONS:
     -c, --css FILE     Use custom CSS file for styling
     -e, --engine ENGINE Use specified PDF engine (default: auto-select)
     --list-engines     List available PDF engines and exit
+    --update           Check for and install the latest version from GitHub
     --uninstall        Uninstall md-to-pdf and remove all installed files (downloads robust uninstaller)
 
 ENGINES:
@@ -127,9 +128,133 @@ EXAMPLES:
     $(basename "$0") --engine weasyprint doc.md # Force WeasyPrint engine (recommended)
     $(basename "$0") --engine xelatex doc.md   # Force XeLaTeX engine
     $(basename "$0") --force document.md       # Overwrite existing document.pdf
+    $(basename "$0") --update                  # Update to the latest version
     $(basename "$0") --uninstall               # Uninstall md-to-pdf (downloads latest uninstaller)
     $(basename "$0") --help                    # Show this help
 EOF
+}
+
+update_to_latest_version() {
+	log::info "Checking for updates to md-to-pdf..."
+
+	# Get current version
+	local current_version
+	current_version=$(get_version)
+	log::info "Current version: $current_version"
+
+	# Check for internet connectivity and curl
+	if ! command -v curl >/dev/null 2>&1; then
+		log::error "curl is required for updates but is not installed"
+		log::info "Please install curl and try again, or update manually from:"
+		log::info "  https://github.com/jeromecoloma/md-to-pdf"
+		return 1
+	fi
+
+	# Fetch latest release info from GitHub API
+	log::info "Fetching latest version information..."
+	local github_api_url="https://api.github.com/repos/jeromecoloma/md-to-pdf/releases/latest"
+	local latest_info
+
+	if ! latest_info=$(curl -fsSL --connect-timeout 10 --max-time 30 "$github_api_url" 2>/tmp/update_error.log); then
+		log::error "Failed to fetch latest version information from GitHub"
+		if [[ -s /tmp/update_error.log ]]; then
+			log::error "Error details:"
+			cat /tmp/update_error.log >&2
+		fi
+		log::info "You can manually check for updates at:"
+		log::info "  https://github.com/jeromecoloma/md-to-pdf/releases"
+		return 1
+	fi
+
+	# Extract latest version using basic text processing (avoiding jq dependency)
+	local latest_version
+	latest_version=$(echo "$latest_info" | grep '"tag_name"' | head -1 | sed 's/.*"tag_name": *"\([^"]*\)".*/\1/' | sed 's/^v//')
+
+	if [[ -z "$latest_version" ]]; then
+		log::error "Could not parse latest version from GitHub API response"
+		log::info "You can manually check for updates at:"
+		log::info "  https://github.com/jeromecoloma/md-to-pdf/releases"
+		return 1
+	fi
+
+	log::info "Latest version: $latest_version"
+
+	# Compare versions (simple string comparison should work for semver)
+	if [[ "$current_version" == "$latest_version" ]]; then
+		log::success "You are already running the latest version ($current_version)"
+		return 0
+	fi
+
+	# Check if current version is newer (in case user has a development version)
+	if [[ "$current_version" > "$latest_version" ]]; then
+		log::info "You appear to be running a development version ($current_version)"
+		log::info "Latest stable release is: $latest_version"
+		read -p "Do you want to downgrade to the latest stable release? (y/N): " -n 1 -r
+		echo
+		if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+			log::info "Update cancelled"
+			return 0
+		fi
+	else
+		# Normal case: current < latest
+		log::info "Update available: $current_version → $latest_version"
+
+		# Show release notes if available
+		local release_notes
+		release_notes=$(echo "$latest_info" | grep -A 1000 '"body"' | head -1 | sed 's/.*"body": *"\(.*\)",/\1/' | sed 's/\\n/\n/g' | sed 's/\\"/"/g')
+		if [[ -n "$release_notes" && "$release_notes" != "null" ]]; then
+			log::info ""
+			log::info "Release notes:"
+			echo "$release_notes" | head -10  # Show first 10 lines
+			log::info ""
+		fi
+
+		read -p "Do you want to update to version $latest_version? (Y/n): " -n 1 -r
+		echo
+		if [[ $REPLY =~ ^[Nn]$ ]]; then
+			log::info "Update cancelled"
+			return 0
+		fi
+	fi
+
+	# Proceed with update
+	log::info "Downloading and running the latest installer..."
+
+	local installer_url="https://raw.githubusercontent.com/jeromecoloma/md-to-pdf/main/install.sh"
+
+	# Test if we can reach the installer URL
+	if ! curl -fsSL --connect-timeout 10 --max-time 5 "$installer_url" >/dev/null 2>&1; then
+		log::error "Cannot download installer from GitHub"
+		log::info "Please try updating manually:"
+		log::info "  bash <(curl -fsSL https://raw.githubusercontent.com/jeromecoloma/md-to-pdf/main/install.sh)"
+		return 1
+	fi
+
+	# Download and execute installer
+	log::info "Installing version $latest_version..."
+	if bash <(curl -fsSL --connect-timeout 10 --max-time 60 "$installer_url") 2>/dev/null; then
+		log::success "Update completed successfully!"
+
+		# Verify the update
+		local new_version
+		new_version=$(get_version)
+		if [[ "$new_version" == "$latest_version" ]]; then
+			log::success "Successfully updated from $current_version to $new_version"
+		else
+			log::warn "Update completed but version check shows: $new_version"
+			log::info "This might be normal if the installer is still running"
+		fi
+
+		log::info "You may need to restart your shell or run 'source ~/.bashrc' (or similar)"
+		log::info "to use the updated version in new terminal sessions"
+
+		exit $EXIT_SUCCESS
+	else
+		log::error "Update failed during installation"
+		log::info "Please try manually:"
+		log::info "  bash <(curl -fsSL https://raw.githubusercontent.com/jeromecoloma/md-to-pdf/main/install.sh)"
+		return 1
+	fi
 }
 
 uninstall_md_to_pdf() {
@@ -1518,6 +1643,10 @@ main() {
 		--list-engines)
 			list_engines
 			exit $EXIT_SUCCESS
+			;;
+		--update)
+			update_to_latest_version
+			exit $?
 			;;
 		--uninstall)
 			# Try to use the standalone uninstaller (more robust) first

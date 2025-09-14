@@ -96,6 +96,7 @@ md-to-pdf --preview document.md
 | `--force`, `-f` | Overwrite existing files without prompting | `md-to-pdf --force doc.md` |
 | `--engine <name>`, `-e <name>` | Use specific PDF engine (weasyprint, xelatex) | `md-to-pdf --engine weasyprint doc.md` |
 | `--list-engines` | List all available PDF engines | `md-to-pdf --list-engines` |
+| `--update` | Check for and install the latest version from GitHub | `md-to-pdf --update` |
 | `--uninstall` | Uninstall md-to-pdf and remove all files | `md-to-pdf --uninstall` |
 
 ### Available Themes
@@ -182,6 +183,9 @@ md-to-pdf --engine xelatex --theme academic thesis.md
 
 # Force WeasyPrint with custom CSS
 md-to-pdf --engine weasyprint --css styles.css document.md
+
+# Check for updates and install latest version
+md-to-pdf --update
 ```
 
 ## 📂 Project Structure

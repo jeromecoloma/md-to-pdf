@@ -1,0 +1,72 @@
+name: Create Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # Triggers on version tags like v1.0.0, v0.2.3, etc.
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Required to create releases
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch full history for changelog generation
+
+      - name: Get tag version
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Get version without 'v' prefix
+        id: get_clean_version
+        run: echo "CLEAN_VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Extract changelog for this version
+        id: changelog
+        run: |
+          # Extract changelog section for this version
+          VERSION="${{ steps.get_clean_version.outputs.CLEAN_VERSION }}"
+
+          # Find the section for this version in CHANGELOG.md
+          if grep -q "\[${VERSION}\]" CHANGELOG.md; then
+            # Extract content between this version and the next version/end of file
+            sed -n "/## \[${VERSION}\]/,/## \[/p" CHANGELOG.md | head -n -1 | tail -n +2 > release_notes.md
+          else
+            echo "No changelog entry found for version ${VERSION}" > release_notes.md
+            echo "" >> release_notes.md
+            echo "### Changes" >> release_notes.md
+            echo "See commit history for detailed changes." >> release_notes.md
+          fi
+
+          # Read the release notes content
+          echo "NOTES<<EOF" >> $GITHUB_OUTPUT
+          cat release_notes.md >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.get_version.outputs.VERSION }}
+          name: ${{ steps.get_version.outputs.VERSION }}
+          body: ${{ steps.changelog.outputs.NOTES }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update VERSION file check
+        run: |
+          # Verify VERSION file matches the tag
+          VERSION_FILE_CONTENT=$(cat VERSION | tr -d '\n\r')
+          TAG_VERSION="${{ steps.get_clean_version.outputs.CLEAN_VERSION }}"
+
+          if [ "$VERSION_FILE_CONTENT" != "$TAG_VERSION" ]; then
+            echo "⚠️  Warning: VERSION file ($VERSION_FILE_CONTENT) doesn't match tag ($TAG_VERSION)"
+            echo "Consider updating VERSION file before tagging next release"
+          else
+            echo "✅ VERSION file matches tag version"
+          fi
