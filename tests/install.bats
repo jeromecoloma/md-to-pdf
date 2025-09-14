@@ -31,9 +31,9 @@ teardown() {
 # Helper function to run install.sh with test environment
 run_install() {
     cd "$TEST_TMP_DIR"
-    mkdir -p bin lib
+    mkdir -p bin
     cp "$PROJECT_ROOT/bin/"* bin/ 2>/dev/null || true
-    cp -r "$PROJECT_ROOT/lib/"* lib/ 2>/dev/null || true
+    cp -r "$PROJECT_ROOT/lib" . 2>/dev/null || true
     cp "$PROJECT_ROOT/VERSION" . 2>/dev/null || true
     run "$PROJECT_ROOT/install.sh" "$@"
 }
@@ -120,16 +120,16 @@ run_install() {
     assert_output --partial "$TEST_PREFIX/"
 }
 
-@test "install.sh: curl installation failure (no bin directory)" {
+@test "install.sh: curl installation success (no local bin directory)" {
     # Simulate curl | bash scenario where script runs without bin/ directory
     cd "$TEST_TMP_DIR"
     # Remove any bin directory that might exist
     rm -rf bin
     # Don't use run_install helper as it creates bin/ directory
     run "$PROJECT_ROOT/install.sh"
-    assert_failure
-    assert_output --partial "No 'bin' directory found"
-    assert_output --partial "Are you running this from the project root?"
+    assert_success
+    assert_output --partial "No local bin/ directory found, downloading project files..."
+    assert_output --partial "Installation complete"
 }
 
 @test "install.sh: adds PATH entry to shell config" {

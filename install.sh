@@ -247,20 +247,33 @@ install_scripts() {
 
 	# Install lib directory to parent of bin
 	local lib_dest="$install_root/lib"
-	if [[ -d "$lib_dest" ]]; then
-		log_info "Removing existing lib directory: $lib_dest"
-		rm -rf "$lib_dest"
+	# Check if destination is the same as source
+	if [[ "$(realpath "$lib_dest")" == "$(realpath "lib")" ]]; then
+		log_info "lib directory is already in place at $lib_dest"
+		echo "$lib_dest/" >>"$MANIFEST_FILE"
+	else
+		# Only remove existing lib directory if it's not the same as our source
+		if [[ -d "$lib_dest" ]]; then
+			log_info "Removing existing lib directory: $lib_dest"
+			rm -rf "$lib_dest"
+		fi
+		log_info "Installing lib directory -> $lib_dest"
+		cp -r "lib" "$lib_dest"
+		echo "$lib_dest/" >>"$MANIFEST_FILE"
 	fi
-	log_info "Installing lib directory -> $lib_dest"
-	cp -r "lib" "$lib_dest"
-	echo "$lib_dest/" >>"$MANIFEST_FILE"
 
 	# Install VERSION file to install root (needed for version detection)
 	if [[ -f "VERSION" ]]; then
 		local version_dest="$install_root/VERSION"
-		log_info "Installing VERSION file -> $version_dest"
-		cp "VERSION" "$version_dest"
-		echo "$version_dest" >>"$MANIFEST_FILE"
+		# Check if destination is the same as source
+		if [[ "$(realpath "$version_dest")" == "$(realpath "VERSION")" ]]; then
+			log_info "VERSION file is already in place at $version_dest"
+			echo "$version_dest" >>"$MANIFEST_FILE"
+		else
+			log_info "Installing VERSION file -> $version_dest"
+			cp "VERSION" "$version_dest"
+			echo "$version_dest" >>"$MANIFEST_FILE"
+		fi
 	fi
 
 	# Install each script in bin/

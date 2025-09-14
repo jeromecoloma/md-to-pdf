@@ -1472,7 +1472,7 @@ interactive_mode() {
 		log::error "Engine selection failed"
 		return 1
 	fi
-	engine="$selected_engine"
+	engine=$(echo "$selected_engine" | tr -d '\n\r')
 
 	# Handle WeasyPrint auto-installation if not available
 	if [[ "$engine" == "weasyprint" ]] && ! check_weasyprint; then
