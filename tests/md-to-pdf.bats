@@ -167,11 +167,13 @@ teardown() {
 	assert_output --partial "File does not exist"
 }
 
-@test "md-to-pdf: no arguments" {
-	run_script "md-to-pdf"
-	assert_failure
-	assert_output --partial "Input file is required"
-	assert_output --partial "Use --help for usage information"
+@test "md-to-pdf: no arguments enters interactive mode" {
+	# Interactive mode will exit when no input is provided in test environment
+	run_script "md-to-pdf" <<< "exit"
+	assert_success
+	assert_output --partial "=== INTERACTIVE MODE ==="
+	assert_output --partial "Welcome to md-to-pdf"
+	assert_output --partial "Exiting interactive mode"
 }
 
 @test "md-to-pdf: empty input file" {
@@ -343,9 +345,9 @@ EOF
 	assert_output --partial "Line count:"
 	assert_output --partial "Output file:"
 	assert_output --partial "Selected theme: github"
-	assert_output --partial "Pandoc command:"
+	assert_output --partial "Pandoc HTML command:"
 	assert_output --partial "pandoc"
-	assert_output --partial "--pdf-engine=xelatex"
+	assert_output --partial "WeasyPrint command:"
 	refute_output --partial "Conversion completed successfully"
 }
 
@@ -361,7 +363,7 @@ EOF
 	assert_success
 	assert_output --partial "Selected theme: academic"
 	assert_output --partial "pandoc"
-	assert_output --partial "academic.tex"
+	assert_output --partial "academic.css"
 }
 
 @test "md-to-pdf: preview with custom output" {

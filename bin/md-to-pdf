@@ -205,7 +205,7 @@ update_to_latest_version() {
 		if [[ -n "$release_notes" && "$release_notes" != "null" ]]; then
 			log::info ""
 			log::info "Release notes:"
-			echo "$release_notes" | head -10  # Show first 10 lines
+			echo "$release_notes" | head -10 # Show first 10 lines
 			log::info ""
 		fi
 

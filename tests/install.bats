@@ -31,8 +31,10 @@ teardown() {
 # Helper function to run install.sh with test environment
 run_install() {
     cd "$TEST_TMP_DIR"
-    mkdir -p bin
+    mkdir -p bin lib
     cp "$PROJECT_ROOT/bin/"* bin/ 2>/dev/null || true
+    cp -r "$PROJECT_ROOT/lib/"* lib/ 2>/dev/null || true
+    cp "$PROJECT_ROOT/VERSION" . 2>/dev/null || true
     run "$PROJECT_ROOT/install.sh" "$@"
 }
 
@@ -59,13 +61,14 @@ run_install() {
     assert_output --partial "md-to-pdf Installer"
 }
 
-@test "install.sh: error when bin directory missing" {
+@test "install.sh: downloads from GitHub when no local bin directory" {
     cd "$TEST_TMP_DIR"
-    rm -rf bin
+    # Ensure no bin directory exists - should trigger GitHub download
+    rm -rf bin lib
     run "$PROJECT_ROOT/install.sh"
-    assert_failure
-    assert_output --partial "No 'bin' directory found"
-    assert_output --partial "Are you running this from the project root?"
+    assert_success
+    assert_output --partial "No local bin/ directory found, downloading project files..."
+    assert_output --partial "Installation complete"
 }
 
 @test "install.sh: successful installation with custom prefix" {
